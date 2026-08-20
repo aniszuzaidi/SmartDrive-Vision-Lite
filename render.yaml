@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: drowsiness-detection-system
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn --workers 2 --bind 0.0.0.0:$PORT web_app:app"
+    envVars:
+      - key: ENABLE_SERVER_CAM
+        value: "false"
+      - key: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
+        value: "python"
