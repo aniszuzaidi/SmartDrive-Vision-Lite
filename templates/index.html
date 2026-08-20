@@ -621,18 +621,17 @@
 
         <div class="main-content">
             <div class="video-container">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center;">
-                    <button id="btn-client-cam" onclick="startClientCamera()" style="padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.9em; box-shadow: 0 4px 15px rgba(102,126,234,0.4);">
-                        📷 Start Device Camera
-                    </button>
-                    <button id="btn-server-cam" onclick="startServerCamera()" style="padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); color: #ccc; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.9em;">
-                        💻 Server Camera Mode
-                    </button>
-                </div>
                 <div class="video-wrapper">
-                    <img id="video-stream" src="/video_feed" alt="Video Stream">
-                    <video id="client-video" autoplay playsinline style="display:none;"></video>
+                    <video id="client-video" autoplay playsinline style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:3;"></video>
+                    <img id="video-stream" src="" alt="Video Stream" style="display:none;">
                     <canvas id="client-canvas" style="display:none;"></canvas>
+                    <div id="camera-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(10,10,20,0.85); border-radius: 20px; z-index: 4;">
+                        <span style="font-size: 3em; margin-bottom: 15px;">📷</span>
+                        <p style="font-size: 1.1em; color: #fff; margin-bottom: 15px; font-weight: 600;">Camera Permission Required</p>
+                        <button onclick="initAutoCamera()" style="padding: 12px 24px; border-radius: 12px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(16,185,129,0.4);">
+                            Enable Camera Access
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1189,37 +1188,42 @@
             }
         }
 
-        async function startClientCamera() {
-            if (isClientCamActive) return;
-            stopServerPolling();
-            
-            const btnClient = document.getElementById('btn-client-cam');
-            const btnServer = document.getElementById('btn-server-cam');
-            btnClient.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            btnServer.style.background = 'rgba(255,255,255,0.08)';
+        async function initAutoCamera() {
+            const overlay = document.getElementById('camera-overlay');
+            const videoEl = document.getElementById('client-video');
 
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480, facingMode: "user" }
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
                 });
                 clientMediaStream = stream;
-                const videoEl = document.getElementById('client-video');
                 videoEl.srcObject = stream;
-                await videoEl.play();
+                videoEl.style.display = 'block';
+                videoEl.style.position = 'absolute';
+                videoEl.style.top = '0';
+                videoEl.style.left = '0';
+                videoEl.style.width = '100%';
+                videoEl.style.height = '100%';
+                videoEl.style.objectFit = 'cover';
+                videoEl.style.zIndex = '3';
                 
+                await videoEl.play();
                 isClientCamActive = true;
+                if (overlay) overlay.style.display = 'none';
+
                 const canvasEl = document.getElementById('client-canvas');
                 const ctx = canvasEl.getContext('2d');
                 canvasEl.width = 640;
                 canvasEl.height = 480;
 
-                const imgStream = document.getElementById('video-stream');
-
+                if (sendFrameInterval) clearInterval(sendFrameInterval);
                 sendFrameInterval = setInterval(() => {
                     if (!isClientCamActive || isProcessingFrame) return;
+                    if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) return;
+
                     isProcessingFrame = true;
                     ctx.drawImage(videoEl, 0, 0, 640, 480);
-                    const base64Img = canvasEl.toDataURL('image/jpeg', 0.6);
+                    const base64Img = canvasEl.toDataURL('image/jpeg', 0.5);
 
                     fetch('/api/process_frame', {
                         method: 'POST',
@@ -1229,63 +1233,23 @@
                     .then(res => res.json())
                     .then(data => {
                         isProcessingFrame = false;
-                        if (data.annotated_image) {
-                            imgStream.src = data.annotated_image;
-                        }
                         updateUIState(data);
                     })
                     .catch(err => {
                         isProcessingFrame = false;
                         console.error('Frame processing error:', err);
                     });
-                }, 120); // ~8 FPS streaming for smooth web performance
+                }, 150);
 
             } catch (err) {
                 console.warn('Browser webcam unavailable or permission denied:', err);
-                alert('Could not access device camera. Falling back to server camera mode.');
-                startServerCamera();
+                if (overlay) overlay.style.display = 'flex';
             }
         }
 
-        function stopClientCamera() {
-            isClientCamActive = false;
-            if (sendFrameInterval) clearInterval(sendFrameInterval);
-            if (clientMediaStream) {
-                clientMediaStream.getTracks().forEach(track => track.stop());
-                clientMediaStream = null;
-            }
-        }
-
-        function startServerCamera() {
-            stopClientCamera();
-            const btnClient = document.getElementById('btn-client-cam');
-            const btnServer = document.getElementById('btn-server-cam');
-            btnClient.style.background = 'rgba(255,255,255,0.08)';
-            btnServer.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-
-            const imgStream = document.getElementById('video-stream');
-            imgStream.src = '/video_feed';
-
-            if (serverPollInterval) clearInterval(serverPollInterval);
-            serverPollInterval = setInterval(() => {
-                if (isClientCamActive) return;
-                fetch('/data')
-                    .then(res => res.json())
-                    .then(data => updateUIState(data))
-                    .catch(err => console.error('Server polling error:', err));
-            }, 150);
-        }
-
-        function stopServerPolling() {
-            if (serverPollInterval) clearInterval(serverPollInterval);
-        }
-
-        // Auto-start: Check if browser camera is accessible or default to server polling
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            startClientCamera();
-        } else {
-            startServerCamera();
-        }
+        // Auto-start device camera as soon as the page loads
+        window.addEventListener('DOMContentLoaded', initAutoCamera);
+        initAutoCamera();
     </script>
 </body>
 </html>
