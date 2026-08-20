@@ -129,8 +129,13 @@ class DrowsinessDetector:
         """
         self.use_mobilenet = use_mobilenet
         
-        # Initialize MediaPipe
-        self.mp_face_mesh = mp.solutions.face_mesh
+        # Initialize MediaPipe with robust fallback
+        try:
+            self.mp_face_mesh = mp.solutions.face_mesh
+        except (AttributeError, Exception):
+            import mediapipe.python.solutions.face_mesh as mp_face_mesh
+            self.mp_face_mesh = mp_face_mesh
+
         self.face_mesh = self.mp_face_mesh.FaceMesh(
             static_image_mode=False,
             max_num_faces=1,
@@ -139,7 +144,12 @@ class DrowsinessDetector:
             min_tracking_confidence=0.5
         )
         
-        self.mp_face_detection = mp.solutions.face_detection
+        try:
+            self.mp_face_detection = mp.solutions.face_detection
+        except (AttributeError, Exception):
+            import mediapipe.python.solutions.face_detection as mp_face_detection
+            self.mp_face_detection = mp_face_detection
+
         self.face_detection = self.mp_face_detection.FaceDetection(
             model_selection=0,
             min_detection_confidence=0.5
