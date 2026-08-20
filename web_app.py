@@ -133,6 +133,19 @@ def generate_frames():
     """Generator function for video streaming"""
     global current_frame, current_data
     
+    # If no server camera is active, yield a single info frame to avoid worker timeout
+    if current_frame is None:
+        placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(placeholder, "Server Camera Mode Disabled", (90, 230),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 180, 255), 2)
+        cv2.putText(placeholder, "Please use 'Start Device Camera'", (100, 270),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 200), 1)
+        ret, buffer = cv2.imencode('.jpg', placeholder)
+        if ret:
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        return
+
     while True:
         with frame_lock:
             if current_frame is not None:
