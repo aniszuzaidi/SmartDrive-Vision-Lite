@@ -661,25 +661,38 @@
         color: rgba(200,200,230,0.7);
         text-align: center;
     }
-    .splash-dots {
+    #server-status {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.82em;
+        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        color: rgba(200,200,230,0.6);
         display: flex;
-        gap: 10px;
+        align-items: center;
+        gap: 7px;
+        transition: all 0.4s ease;
     }
-    .splash-dots span {
-        width: 10px;
-        height: 10px;
+    #server-status.ready {
+        background: rgba(16,185,129,0.12);
+        border-color: rgba(16,185,129,0.35);
+        color: #10b981;
+    }
+    .status-dot {
+        width: 7px;
+        height: 7px;
         border-radius: 50%;
-        background: #667eea;
-        animation: bounce-dot 1.2s ease-in-out infinite;
+        background: rgba(200,200,230,0.4);
+        transition: background 0.4s ease;
     }
-    .splash-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .splash-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce-dot {
-        0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-        40%            { transform: scale(1.2); opacity: 1; }
+    #server-status.ready .status-dot {
+        background: #10b981;
+        box-shadow: 0 0 6px rgba(16,185,129,0.8);
     }
     #splash-btn {
-        margin-top: 8px;
+        margin-top: 4px;
         padding: 16px 44px;
         border-radius: 50px;
         border: none;
@@ -690,7 +703,7 @@
         font-weight: 700;
         cursor: pointer;
         box-shadow: 0 6px 30px rgba(16,185,129,0.45);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
         letter-spacing: 0.5px;
     }
     #splash-btn:hover {
@@ -710,20 +723,44 @@
 </style>
 
 <div id="splash-overlay">
-    <div class="splash-logo">👁️</div>
+    <div class="splash-logo">👀</div>
     <div class="splash-title">SmartDrive Vision</div>
     <div class="splash-sub">Eye Tracker for Road Safety</div>
-    <div class="splash-dots">
-        <span></span><span></span><span></span>
+    <div id="server-status">
+        <span class="status-dot"></span>
+        <span id="server-status-text">Warming up server…</span>
     </div>
     <button id="splash-btn" onclick="startMonitoring()">&#9654; &nbsp;Start Monitoring</button>
     <p class="splash-note">Your browser will ask for camera permission — please click Allow.</p>
 </div>
 
+<script>
+    // Ping server in background while user reads splash — warms up Render's free tier
+    (function warmUpServer() {
+        const statusEl = document.getElementById('server-status');
+        const statusText = document.getElementById('server-status-text');
+        let attempts = 0;
+        function ping() {
+            fetch('/data', { cache: 'no-store' })
+                .then(r => { if (r.ok) {
+                    statusEl.classList.add('ready');
+                    statusText.textContent = 'Server ready ✓';
+                } else { retry(); } })
+                .catch(() => { retry(); });
+        }
+        function retry() {
+            attempts++;
+            if (attempts < 10) setTimeout(ping, 3000);
+            else statusText.textContent = 'Click to start anyway';
+        }
+        ping();
+    })();
+</script>
+
 <body>
     <div class="container">
         <div class="header">
-            <h1>👁️ SmartDrive Vision</h1>
+            <h1>👀 SmartDrive Vision</h1>
             <p>EYE TRACKER FOR ROAD SAFETY</p>
         </div>
 
