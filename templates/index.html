@@ -722,42 +722,43 @@
     }
 </style>
 
-<div id="splash-overlay">
-    <div class="splash-logo">👀</div>
-    <div class="splash-title">SmartDrive Vision</div>
-    <div class="splash-sub">Eye Tracker for Road Safety</div>
-    <div id="server-status">
-        <span class="status-dot"></span>
-        <span id="server-status-text">Warming up server…</span>
-    </div>
-    <button id="splash-btn" onclick="startMonitoring()">&#9654; &nbsp;Start Monitoring</button>
-    <p class="splash-note">Your browser will ask for camera permission — please click Allow.</p>
-</div>
-
-<script>
-    // Ping server in background while user reads splash — warms up Render's free tier
-    (function warmUpServer() {
-        const statusEl = document.getElementById('server-status');
-        const statusText = document.getElementById('server-status-text');
-        let attempts = 0;
-        function ping() {
-            fetch('/data', { cache: 'no-store' })
-                .then(r => { if (r.ok) {
-                    statusEl.classList.add('ready');
-                    statusText.textContent = 'Server ready ✓';
-                } else { retry(); } })
-                .catch(() => { retry(); });
-        }
-        function retry() {
-            attempts++;
-            if (attempts < 10) setTimeout(ping, 3000);
-            else statusText.textContent = 'Click to start anyway';
-        }
-        ping();
-    })();
-</script>
-
 <body>
+    <!-- ── Full-screen splash overlay ─────────────────────────────────── -->
+    <div id="splash-overlay">
+        <div class="splash-logo">👀</div>
+        <div class="splash-title">SmartDrive Vision</div>
+        <div class="splash-sub">Eye Tracker for Road Safety</div>
+        <div id="server-status">
+            <span class="status-dot"></span>
+            <span id="server-status-text">Warming up server…</span>
+        </div>
+        <button id="splash-btn" onclick="startMonitoring()">&#9654; &nbsp;Start Monitoring</button>
+        <p class="splash-note">Your browser will ask for camera permission — please click Allow.</p>
+    </div>
+
+    <script>
+        // Ping server in background while user reads splash — warms up Render's free tier
+        (function warmUpServer() {
+            const statusEl = document.getElementById('server-status');
+            const statusText = document.getElementById('server-status-text');
+            let attempts = 0;
+            function ping() {
+                fetch('/data', { cache: 'no-store' })
+                    .then(r => { if (r.ok) {
+                        statusEl.classList.add('ready');
+                        statusText.textContent = 'Server ready ✓';
+                    } else { retry(); } })
+                    .catch(() => { retry(); });
+            }
+            function retry() {
+                attempts++;
+                if (attempts < 10) setTimeout(ping, 3000);
+                else statusText.textContent = 'Click to start anyway';
+            }
+            ping();
+        })();
+    </script>
+
     <div class="container">
         <div class="header">
             <h1>👀 SmartDrive Vision</h1>
@@ -767,7 +768,7 @@
         <div class="main-content">
             <div class="video-container">
                 <div class="video-wrapper">
-                    <video id="client-video" autoplay playsinline style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:3; display:none;"></video>
+                    <video id="client-video" autoplay playsinline muted style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:3; display:none;"></video>
                     <img id="video-stream" src="" alt="Video Stream" style="display:none;">
                     <canvas id="client-canvas" style="display:none;"></canvas>
                     <!-- Only shown if user denies camera after the splash -->
@@ -1391,13 +1392,18 @@
         }
 
         // Called by the splash "Start Monitoring" button
-        async function startMonitoring() {
+        function startMonitoring() {
             const splash = document.getElementById('splash-overlay');
             const btn = document.getElementById('splash-btn');
-            btn.disabled = true;
-            btn.textContent = 'Starting…';
-            await initAutoCamera();
-            // Fade out splash whether camera worked or not
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Starting…';
+            }
+            
+            // Start the camera (browser prompts for permission)
+            initAutoCamera();
+            
+            // Immediately transition to the main dashboard UI
             if (splash) splash.classList.add('hidden');
         }
     </script>
