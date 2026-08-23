@@ -133,8 +133,13 @@ class DrowsinessDetector:
         try:
             self.mp_face_mesh = mp.solutions.face_mesh
         except (AttributeError, Exception):
-            import mediapipe.python.solutions.face_mesh as mp_face_mesh
-            self.mp_face_mesh = mp_face_mesh
+            try:
+                import mediapipe.python.solutions.face_mesh as mp_face_mesh
+                self.mp_face_mesh = mp_face_mesh
+            except Exception as e:
+                raise RuntimeError(
+                    f"MediaPipe Face Mesh solution is unavailable. Ensure mediapipe<=0.10.14 is installed. Details: {e}"
+                )
 
         self.face_mesh = self.mp_face_mesh.FaceMesh(
             static_image_mode=False,
@@ -147,8 +152,13 @@ class DrowsinessDetector:
         try:
             self.mp_face_detection = mp.solutions.face_detection
         except (AttributeError, Exception):
-            import mediapipe.python.solutions.face_detection as mp_face_detection
-            self.mp_face_detection = mp_face_detection
+            try:
+                import mediapipe.python.solutions.face_detection as mp_face_detection
+                self.mp_face_detection = mp_face_detection
+            except Exception as e:
+                raise RuntimeError(
+                    f"MediaPipe Face Detection solution is unavailable. Ensure mediapipe<=0.10.14 is installed. Details: {e}"
+                )
 
         self.face_detection = self.mp_face_detection.FaceDetection(
             model_selection=0,
