@@ -178,8 +178,20 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            z-index: 2;
+            object-fit: cover;
+            z-index: 10 !important;
+            border-radius: 20px;
+        }
+
+        .video-wrapper video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            border-radius: 20px;
         }
 
         .stats-panel {
@@ -768,8 +780,8 @@
         <div class="main-content">
             <div class="video-container">
                 <div class="video-wrapper">
-                    <video id="client-video" autoplay playsinline muted style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:3; display:none; transform: scaleX(-1); -webkit-transform: scaleX(-1);"></video>
-                    <img id="video-stream" src="" alt="Video Stream" style="display:none; transform: scaleX(-1); -webkit-transform: scaleX(-1);">
+                    <video id="client-video" autoplay playsinline muted style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:1; display:none; transform: scaleX(-1); -webkit-transform: scaleX(-1);"></video>
+                    <img id="video-stream" src="" alt="Video Stream" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:10; display:none; transform: scaleX(-1); -webkit-transform: scaleX(-1);">
                     <canvas id="client-canvas" style="display:none;"></canvas>
                     <!-- Only shown if user denies camera after the splash -->
                     <div id="camera-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(10,10,20,0.85); border-radius: 20px; z-index: 4;">
@@ -1348,7 +1360,7 @@
                 videoEl.style.width = '100%';
                 videoEl.style.height = '100%';
                 videoEl.style.objectFit = 'cover';
-                videoEl.style.zIndex = '3';
+                videoEl.style.zIndex = '1';
                 videoEl.style.transform = 'scaleX(-1)';
                 videoEl.style.webkitTransform = 'scaleX(-1)';
                 
@@ -1361,7 +1373,7 @@
                     streamImg.style.width = '100%';
                     streamImg.style.height = '100%';
                     streamImg.style.objectFit = 'cover';
-                    streamImg.style.zIndex = '4';
+                    streamImg.style.zIndex = '10';
                     streamImg.style.transform = 'scaleX(-1)';
                     streamImg.style.webkitTransform = 'scaleX(-1)';
                 }
@@ -1382,7 +1394,7 @@
 
                     isProcessingFrame = true;
                     ctx.drawImage(videoEl, 0, 0, 640, 480);
-                    const base64Img = canvasEl.toDataURL('image/jpeg', 0.5);
+                    const base64Img = canvasEl.toDataURL('image/jpeg', 0.8);
 
                     fetch('/api/process_frame', {
                         method: 'POST',
@@ -1395,13 +1407,14 @@
                         updateUIState(data);
                         if (data.annotated_image && streamImg) {
                             streamImg.src = data.annotated_image;
+                            streamImg.style.display = 'block';
                         }
                     })
                     .catch(err => {
                         isProcessingFrame = false;
                         console.error('Frame processing error:', err);
                     });
-                }, 150);
+                }, 120);
 
             } catch (err) {
                 console.warn('Browser webcam unavailable or permission denied:', err);
