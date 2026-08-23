@@ -835,15 +835,17 @@ def main():
     print("\n" + "="*60)
     print("MobileNetV2 + EAR + PERCLOS Drowsiness Detection")
     print("="*60)
-    print("Press 'q' to quit\n")
+    print("Press 'f' to toggle mirror view, 'q' to quit\n")
     
+    mirror_mode = True
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
             
-            frame = cv2.flip(frame, 1)
+            if mirror_mode:
+                frame = cv2.flip(frame, 1)
             
             is_drowsy, eye_state, ear, perclos, landmarks, risk_score, risk_category, alert_level = detector.detect(frame)
             
@@ -875,8 +877,12 @@ def main():
             
             cv2.imshow("MobileNetV2 + EAR + PERCLOS Detection", frame)
             
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
                 break
+            elif key == ord('f'):
+                mirror_mode = not mirror_mode
+                print(f"[Camera] Mirror View: {'ON (Selfie)' if mirror_mode else 'OFF (Observer)'}")
     finally:
         cap.release()
         cv2.destroyAllWindows()
