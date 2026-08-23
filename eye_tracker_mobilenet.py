@@ -173,19 +173,26 @@ class DrowsinessDetector:
             min_detection_confidence=0.3
         )
         
+        # Base directory of this script to ensure relative paths work from any working directory
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
         # Load MobileNetV2 models if available
         self.eye_model = None
         self.scaler_ear = None
         self.model_accuracy = None  # Store actual model accuracy
         
         if use_mobilenet:
+            h5_path = os.path.join(base_dir, 'eye_model_mobilenet.h5')
+            part1_path = os.path.join(base_dir, 'eye_model_mobilenet.h5.part1')
+            part2_path = os.path.join(base_dir, 'eye_model_mobilenet.h5.part2')
+
             # Recombine split files if main .h5 is missing
-            if not os.path.exists('eye_model_mobilenet.h5') and os.path.exists('eye_model_mobilenet.h5.part1') and os.path.exists('eye_model_mobilenet.h5.part2'):
+            if not os.path.exists(h5_path) and os.path.exists(part1_path) and os.path.exists(part2_path):
                 try:
-                    with open('eye_model_mobilenet.h5', 'wb') as fout:
-                        with open('eye_model_mobilenet.h5.part1', 'rb') as f1:
+                    with open(h5_path, 'wb') as fout:
+                        with open(part1_path, 'rb') as f1:
                             fout.write(f1.read())
-                        with open('eye_model_mobilenet.h5.part2', 'rb') as f2:
+                        with open(part2_path, 'rb') as f2:
                             fout.write(f2.read())
                     print("[OK] Recombined split model files into eye_model_mobilenet.h5!")
                 except Exception as ex:
@@ -194,15 +201,16 @@ class DrowsinessDetector:
             # Try loading H5 format first, then SavedModel format
             try:
                 self.eye_model = tf.keras.models.load_model(
-                    'eye_model_mobilenet.h5',
+                    h5_path if os.path.exists(h5_path) else 'eye_model_mobilenet.h5',
                     compile=False
                 )
                 print("[OK] Loaded MobileNetV2 eye state model (H5 format)!")
             except:
                 try:
                     # Try SavedModel format
+                    saved_model_path = os.path.join(base_dir, 'eye_model_mobilenet')
                     self.eye_model = tf.keras.models.load_model(
-                        'eye_model_mobilenet',
+                        saved_model_path if os.path.exists(saved_model_path) else 'eye_model_mobilenet',
                         compile=False
                     )
                     print("[OK] Loaded MobileNetV2 eye state model (SavedModel format)!")
@@ -221,17 +229,21 @@ class DrowsinessDetector:
                 except:
                     pass  # Model might already be compiled
             
+            scaler_path = os.path.join(base_dir, 'scaler_ear_mobilenet.pkl')
             try:
-                with open('scaler_ear_mobilenet.pkl', 'rb') as f:
+                with open(scaler_path if os.path.exists(scaler_path) else 'scaler_ear_mobilenet.pkl', 'rb') as f:
                     self.scaler_ear = pickle.load(f)
                 print("[OK] Loaded EAR feature scaler!")
             except:
                 print("[WARNING] Scaler not found. Will not scale EAR features.")
             
             # Load actual model accuracy from training
+            accuracy_path = os.path.join(base_dir, 'model_accuracy.json')
+            if not os.path.exists(accuracy_path):
+                accuracy_path = 'model_accuracy.json'
             try:
-                if os.path.exists('model_accuracy.json'):
-                    with open('model_accuracy.json', 'r') as f:
+                if os.path.exists(accuracy_path):
+                    with open(accuracy_path, 'r') as f:
                         accuracy_info = json.load(f)
                         self.model_accuracy = accuracy_info.get('test_accuracy', None)
                         if self.model_accuracy is not None:
@@ -240,13 +252,37 @@ class DrowsinessDetector:
                 print(f"[WARNING] Could not load model accuracy: {e}")
         
         # Initialize pygame for sound alerts
+        self.alert_sound = None
         if PYGAME_AVAILABLE:
-            pygame.mixer.init()
             try:
-                self.alert_sound = pygame.mixer.Sound("alert.wav")
-            except:
-                print("Warning: alert.wav not found. Using system beep.")
-                self.alert_sound = None
+                pygame.mixer.init()
+                sound_candidates = [
+                    os.path.join(base_dir, 'drowsy.wav'),
+                    os.path.join(base_dir, 'critical.wav'),
+                    os.path.join(base_dir, 'alert.wav'),
+                    os.path.join(base_dir, 'static', 'drowsy.wav'),
+                    os.path.join(base_dir, 'static', 'critical.wav'),
+                    'drowsy.wav',
+                    'critical.wav',
+                    'alert.wav'
+                ]
+                for candidate in sound_candidates:
+                    if os.path.exists(candidate):
+                        self.alert_sound = pygame.mixer.Sound(candidate)
+                        print(f"[OK] Loaded sound alert: {os.path.basename(candidate)}")
+                        break
+                if self.alert_sound is None:
+                    print("Warning: alert sound file not found. System beep will be used.")
+            except Exception as e:
+                print(f"Warning: Could not initialize sound alert ({e}). Using system beep.")
+        
+        # Personal calibration & adaptive thresholding
+        self.ear_threshold = EAR_THRESHOLD  # Baseline threshold (default: 0.18)
+        self._calibrating = True
+        self._calib_ear_samples = []
+        self._calib_duration = 2.0  # 2 seconds calibration on startup
+        self._calib_start_time = None
+        self._smoothed_ear = None
         
         # State tracking
         self.ear_counter = 0
@@ -438,9 +474,10 @@ class DrowsinessDetector:
     
     def calculate_perclos(self):
         """Calculate PERCLOS (Percentage of Eye Closure)"""
-        if len(self.ear_history) < FRAME_WINDOW:
+        if len(self.ear_history) == 0:
             return 0.0
-        closed_count = sum(1 for ear in self.ear_history if ear < EAR_THRESHOLD)
+        thr = getattr(self, 'ear_threshold', EAR_THRESHOLD)
+        closed_count = sum(1 for ear in self.ear_history if ear < thr)
         return closed_count / len(self.ear_history)
     
     def calculate_head_pose(self, landmarks, h, w):
@@ -628,21 +665,23 @@ class DrowsinessDetector:
             return 3
     
     def play_alert(self, continuous=True):
-        """Play sound alert - continuous if drowsy, stop if not
-        NOTE: System beep disabled - using WAV files in web interface instead
-        """
+        """Play sound alert - continuous if drowsy, stop if not"""
         if continuous:
-            # Continuous alert - keep playing while drowsy
-            # Disabled system beep - using WAV files in browser instead
             if PYGAME_AVAILABLE and self.alert_sound:
                 if not self.is_alert_playing:
                     # Start playing in a loop
                     self.alert_channel = self.alert_sound.play(loops=-1)  # -1 means infinite loop
                     self.is_alert_playing = True
-            # System beep fallback disabled - using WAV files in web interface
-            # else:
-            #     # Fallback: beep every second - DISABLED
-            #     pass
+            else:
+                # Fallback beep if sound file or channel is unavailable
+                try:
+                    if sys.platform == 'win32':
+                        import winsound
+                        winsound.Beep(1000, 200)
+                    else:
+                        print('\a', end='', flush=True)
+                except Exception:
+                    pass
         else:
             # Stop the alert
             self.stop_alert()
@@ -668,51 +707,71 @@ class DrowsinessDetector:
         # Extract EAR/PERCLOS features
         ear_features, avg_ear = self.extract_ear_features(landmarks, h, w)
         
+        # Temporal smoothing for EAR to eliminate webcam noise & compression jitter
+        if self._smoothed_ear is None:
+            self._smoothed_ear = avg_ear
+        else:
+            self._smoothed_ear = 0.65 * avg_ear + 0.35 * self._smoothed_ear
+        current_ear = self._smoothed_ear
+        
+        # Calibration phase (first 2 seconds of seeing face)
+        current_time = time.time()
+        if self._calibrating:
+            if self._calib_start_time is None:
+                self._calib_start_time = current_time
+            if current_ear > 0.05:
+                self._calib_ear_samples.append(current_ear)
+            if current_time - self._calib_start_time >= self._calib_duration and len(self._calib_ear_samples) >= 5:
+                baseline = float(np.median(self._calib_ear_samples))
+                self.ear_threshold = max(0.13, min(0.23, round(baseline * 0.72, 3)))
+                self._calibrating = False
+                print(f"[Auto-Calibration] Baseline EAR: {baseline:.3f} | Dynamic Threshold: {self.ear_threshold:.3f}")
+        
         # Update EAR history for PERCLOS
-        self.ear_history.append(avg_ear)
+        self.ear_history.append(current_ear)
         perclos = self.calculate_perclos()
         
-        # Determine eye state
-        eye_state = "Open"
-        mobilenet_predicted = False
+        # Determine eye state using Intelligent Multi-Modal Fusion (EAR + MobileNet)
+        active_threshold = getattr(self, 'ear_threshold', EAR_THRESHOLD)
+        left_eye_width = ear_features[3] if len(ear_features) > 3 else 50
+        right_eye_width = ear_features[5] if len(ear_features) > 5 else 50
+        avg_eye_width = (left_eye_width + right_eye_width) / 2.0 if (left_eye_width + right_eye_width) > 0 else 50
+        if avg_eye_width < 35:
+            active_threshold = active_threshold * 0.88
+            
+        ear_closed = current_ear < active_threshold
+        ear_ambiguous = (active_threshold <= current_ear <= active_threshold * 1.30)
         
-        # Use MobileNetV2 model if available
-        if self.use_mobilenet and self.eye_model is not None:
+        model_state = None
+        # In ambiguous zone, query MobileNetV2 for feature fusion confirmation
+        if self.use_mobilenet and self.eye_model is not None and ear_ambiguous:
             try:
-                # Extract face ROI for MobileNetV2
                 face_roi = self.extract_face_roi(frame, landmarks)
                 if face_roi is not None:
-                    # Preprocess face ROI
                     face_processed = preprocess_input(face_roi.astype('float32'))
                     face_processed = np.expand_dims(face_processed, axis=0)
-                    
-                    # Scale EAR features
                     if self.scaler_ear is not None:
                         ear_features_scaled = self.scaler_ear.transform([ear_features])
                     else:
                         ear_features_scaled = np.array([ear_features])
-                    
-                    # Predict with MobileNetV2 model
                     eye_pred = self.eye_model.predict([face_processed, ear_features_scaled], verbose=0)
-                    eye_state = "Closed" if np.argmax(eye_pred[0]) == 0 else "Open"
-                    mobilenet_predicted = True
+                    # Class 0: Closed, Class 1: Open
+                    prob_closed = float(eye_pred[0][0])
+                    prob_open = float(eye_pred[0][1])
+                    if prob_closed > 0.55:
+                        model_state = "Closed"
+                    elif prob_open > 0.55:
+                        model_state = "Open"
             except Exception as e:
-                print(f"Error in MobileNetV2 prediction: {e}")
+                pass
         
-        # Fallback to threshold-based detection if MobileNetV2 not available
-        if not mobilenet_predicted:
-            left_ear_val = ear_features[1] if len(ear_features) > 1 else avg_ear
-            right_ear_val = ear_features[2] if len(ear_features) > 2 else avg_ear
-            left_eye_width = ear_features[3] if len(ear_features) > 3 else 50
-            right_eye_width = ear_features[5] if len(ear_features) > 5 else 50
-            
-            avg_eye_width = (left_eye_width + right_eye_width) / 2.0 if (left_eye_width + right_eye_width) > 0 else 50
-            adaptive_threshold = EAR_THRESHOLD * 0.85 if avg_eye_width < 40 else EAR_THRESHOLD
-            
-            if avg_ear < adaptive_threshold:
-                eye_state = "Closed"
-            else:
-                eye_state = "Open"
+        # Decision Fusion:
+        if ear_closed:
+            eye_state = "Closed"
+        elif ear_ambiguous and model_state is not None:
+            eye_state = model_state
+        else:
+            eye_state = "Open"
 
         # Update closure counters for drowsiness tracking
         if eye_state == "Closed":
