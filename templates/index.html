@@ -6,15 +6,9 @@
     <title>SmartDrive Vision</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --primary-gradient: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-            --secondary-gradient: linear-gradient(135deg, #1e1e3f 0%, #2d2d44 100%);
             --success-color: #10b981;
             --warning-color: #f59e0b;
             --danger-color: #ef4444;
@@ -23,753 +17,118 @@
             --bg-dark: #0a0a14;
             --bg-card: rgba(30, 30, 50, 0.6);
         }
-
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg-dark);
-            background-attachment: fixed;
             min-height: 100vh;
             padding: 20px;
             color: #e0e0e0;
-            position: relative;
             overflow-x: hidden;
         }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(30, 30, 50, 0.5) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .container {
-            max-width: 1500px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
+        .container { max-width: 1500px; margin: 0 auto; position: relative; z-index: 1; }
+        .header { text-align: center; margin-bottom: 40px; }
         .header h1 {
-            font-size: 3.8em;
+            font-size: 3.5em;
             font-weight: 900;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #ffffff 0%, #667eea 30%, #764ba2 60%, #f093fb 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #667eea 40%, #f093fb 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
             letter-spacing: -2px;
-            position: relative;
-            display: inline-block;
-            animation: gradientShift 4s ease infinite;
-            background-size: 200% 200%;
-            text-shadow: 
-                0 0 30px rgba(102, 126, 234, 0.8),
-                0 4px 20px rgba(0,0,0,0.6);
-            filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.5));
         }
-
-        @keyframes gradientShift {
-            0%, 100% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.95;
-            font-weight: 600;
-            color: #ffffff;
-            text-shadow: 
-                0 0 15px rgba(102, 126, 234, 0.5),
-                0 2px 15px rgba(0,0,0,0.5);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-top: 10px;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1.2fr 450px;
-            gap: 30px;
-            animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @media (max-width: 1200px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2.2em;
-            }
-        }
-
+        .header p { font-size: 1.1em; opacity: 0.9; font-weight: 600; color: #fff; letter-spacing: 3px; }
+        .main-content { display: grid; grid-template-columns: 1.2fr 450px; gap: 30px; }
+        @media (max-width: 1200px) { .main-content { grid-template-columns: 1fr; } }
         .video-container {
             background: var(--bg-card);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 25px;
-            box-shadow: 
-                0 8px 32px rgba(0,0,0,0.5),
-                inset 0 1px 0 rgba(255,255,255,0.1);
             border: 1px solid var(--glass-border);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-
-        .video-container:hover {
-            transform: translateY(-5px);
-            box-shadow: 
-                0 12px 40px rgba(0,0,0,0.6),
-                inset 0 1px 0 rgba(255,255,255,0.15);
-            border-color: rgba(255,255,255,0.2);
-        }
-
         .video-wrapper {
             position: relative;
             width: 100%;
             padding-bottom: 75%;
-            background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
+            background: #0a0a14;
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: 
-                0 10px 40px rgba(0,0,0,0.8),
-                inset 0 0 100px rgba(102, 126, 234, 0.05);
         }
-
-        .video-wrapper::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent 30%, rgba(102, 126, 234, 0.1) 50%, transparent 70%);
-            animation: shimmer 3s infinite;
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
         .video-wrapper img {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             object-fit: cover;
             z-index: 10 !important;
             border-radius: 20px;
         }
-
         .video-wrapper video {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             object-fit: cover;
             z-index: 1;
             border-radius: 20px;
         }
-
         .stats-panel {
             background: var(--bg-card);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 30px;
-            box-shadow: 
-                0 8px 32px rgba(0,0,0,0.5),
-                inset 0 1px 0 rgba(255,255,255,0.1);
             border: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-
-        .status-card {
-            background: linear-gradient(135deg, rgba(40, 40, 60, 0.8) 0%, rgba(30, 30, 50, 0.6) 100%);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 2px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .status-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .status-card:hover::before {
-            left: 100%;
-        }
-
-        .status-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        }
-
-        .status-card.active {
-            border-color: var(--success-color);
-            box-shadow: 
-                0 0 30px rgba(16, 185, 129, 0.4),
-                inset 0 0 30px rgba(16, 185, 129, 0.1);
-        }
-
-        .status-card.drowsy {
-            border-color: var(--danger-color);
-            box-shadow: 
-                0 0 40px rgba(239, 68, 68, 0.6),
-                inset 0 0 40px rgba(239, 68, 68, 0.15);
-            animation: pulseAlert 2s ease-in-out infinite;
-        }
-
-        .status-card.warning {
-            border-color: var(--warning-color);
-            box-shadow: 
-                0 0 30px rgba(245, 158, 11, 0.5),
-                inset 0 0 30px rgba(245, 158, 11, 0.1);
-        }
-
-        @keyframes pulseAlert {
-            0%, 100% {
-                box-shadow: 
-                    0 0 30px rgba(239, 68, 68, 0.5),
-                    inset 0 0 30px rgba(239, 68, 68, 0.1);
-            }
-            50% {
-                box-shadow: 
-                    0 0 60px rgba(239, 68, 68, 0.8),
-                    inset 0 0 50px rgba(239, 68, 68, 0.2);
-            }
-        }
-
-        .risk-score-card {
-            background: linear-gradient(135deg, rgba(40, 40, 60, 0.8) 0%, rgba(30, 30, 50, 0.6) 100%);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 2px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .risk-score-card.safe {
-            border-color: #10b981;
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
-        }
-
-        .risk-score-card.warning-risk {
-            border-color: #f59e0b;
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
-            animation: pulseWarning 2s ease-in-out infinite;
-        }
-
-        .risk-score-card.danger-risk {
-            border-color: #ef4444;
-            box-shadow: 0 0 40px rgba(239, 68, 68, 0.6);
-            animation: pulseAlert 2s ease-in-out infinite;
-        }
-
-        @keyframes pulseWarning {
-            0%, 100% {
-                box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
-            }
-            50% {
-                box-shadow: 0 0 45px rgba(245, 158, 11, 0.6);
-            }
-        }
-
-        .risk-score-value {
-            font-size: 3.5em;
-            font-weight: 800;
-            margin: 15px 0;
-            letter-spacing: -2px;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-
-        .risk-score-value.safe {
-            color: #10b981;
-            text-shadow: 0 0 25px rgba(16, 185, 129, 0.6);
-        }
-
-        .risk-score-value.warning {
-            color: #f59e0b;
-            text-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
-        }
-
-        .risk-score-value.danger {
-            color: #ef4444;
-            text-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
-        }
-
-        .metric-subtitle {
-            font-size: 0.85em;
-            opacity: 0.9;
-            font-weight: 600;
-        }
-
-        .alert-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(40, 40, 60, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 12px;
-            padding: 15px 20px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            border: 2px solid rgba(255,255,255,0.1);
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
-            max-width: 300px;
-            font-weight: 600;
-        }
-
-        .alert-indicator.show {
-            display: flex;
-        }
-
-        .alert-indicator.visual {
-            border-color: #f59e0b;
-        }
-
-        .alert-indicator.voice {
-            border-color: #ef4444;
-            box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
-            animation: pulseAlert 2s ease-in-out infinite;
-        }
-
-        .alert-indicator.critical {
-            border-color: #ef4444;
-            animation: shake 0.5s ease-in-out infinite;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
-        }
-
-        .status-label {
-            font-size: 0.85em;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            opacity: 0.8;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .status-value {
-            font-size: 2.5em;
-            font-weight: 800;
-            margin-bottom: 10px;
-            letter-spacing: -1px;
-            text-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-        }
-
-        .status-value.drowsy-text {
-            color: #ff6b6b;
-            text-shadow: 0 0 25px rgba(255, 107, 107, 0.7);
-        }
-
-        .status-value.awake-text {
-            color: #51cf66;
-            text-shadow: 0 0 25px rgba(81, 207, 102, 0.7);
-        }
-
-        .status-subtitle {
-            font-size: 0.95em;
-            opacity: 0.85;
-            font-weight: 500;
-        }
-
         .metric-card {
-            background: linear-gradient(135deg, rgba(40, 40, 60, 0.6) 0%, rgba(30, 30, 50, 0.4) 100%);
+            background: rgba(40, 40, 60, 0.6);
             border-radius: 16px;
             padding: 24px;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 1px solid rgba(255,255,255,0.08);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .metric-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.3s ease;
-        }
-
-        .metric-card:hover {
-            background: linear-gradient(135deg, rgba(50, 50, 70, 0.8) 0%, rgba(40, 40, 60, 0.6) 100%);
-            transform: translateX(8px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-            border-color: rgba(255,255,255,0.15);
-        }
-
-        .metric-card:hover::after {
-            transform: scaleX(1);
-        }
-
-        .metric-label {
-            font-size: 0.8em;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.75;
-            margin-bottom: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-        }
-
-        .metric-value {
-            font-size: 2em;
-            font-weight: 700;
-            margin-bottom: 12px;
-            letter-spacing: -0.5px;
-        }
-
-        .metric-bar {
-            margin-top: 12px;
-            height: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .metric-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #34d399);
-            border-radius: 10px;
-            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 
-                0 0 10px rgba(16, 185, 129, 0.5),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .metric-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            animation: shine 2s infinite;
-        }
-
-        @keyframes shine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        .metric-fill.warning {
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-            box-shadow: 
-                0 0 10px rgba(245, 158, 11, 0.5),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-        }
-
-        .metric-fill.danger {
-            background: linear-gradient(90deg, #ef4444, #f87171);
-            box-shadow: 
-                0 0 15px rgba(239, 68, 68, 0.6),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-        }
-
-        .icon {
-            display: inline-block;
-            margin-right: 10px;
-            font-size: 1.3em;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 25px;
-            opacity: 0.7;
-            font-size: 0.9em;
-            font-weight: 500;
-            color: #a0a0a0;
-            background: rgba(30, 30, 50, 0.4);
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
         }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            font-size: 1.3em;
+        .metric-label { font-size: 0.85em; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; margin-bottom: 10px; font-weight: 600; }
+        .metric-value { font-size: 2.2em; font-weight: 700; margin-bottom: 10px; }
+        .metric-bar { height: 10px; background: rgba(0, 0, 0, 0.5); border-radius: 10px; overflow: hidden; }
+        .metric-fill { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 10px; transition: width 0.3s; }
+        .metric-fill.warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .metric-fill.danger { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .alert-indicator {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(40, 40, 60, 0.95);
+            border-radius: 12px; padding: 15px 20px;
+            display: none; align-items: center; gap: 12px;
+            z-index: 1000; font-weight: 600;
         }
-
-        .spinner {
-            border: 5px solid rgba(255, 255, 255, 0.2);
-            border-top: 5px solid #fff;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 30px auto;
-            box-shadow: 0 0 20px rgba(255,255,255,0.3);
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Smooth number transitions */
-        .metric-value, .status-value {
-            transition: all 0.3s ease;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 1.8em;
-            }
-            
-            .header p {
-                font-size: 1em;
-            }
-            
-            .stats-panel {
-                padding: 20px;
-            }
-        }
+        .alert-indicator.show { display: flex; }
+        .alert-indicator.voice, .alert-indicator.critical { border: 2px solid #ef4444; }
+        .footer { text-align: center; margin-top: 40px; padding: 25px; opacity: 0.7; }
     </style>
 </head>
 
-<!-- ── Full-screen splash overlay ─────────────────────────────────── -->
 <style>
     #splash-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        background: radial-gradient(ellipse at 30% 40%, rgba(102,126,234,0.25) 0%, transparent 60%),
-                    radial-gradient(ellipse at 70% 60%, rgba(118,75,162,0.20) 0%, transparent 60%),
-                    #0a0a14;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 28px;
-        transition: opacity 0.6s ease, visibility 0.6s ease;
+        position: fixed; inset: 0; z-index: 9999;
+        background: #0a0a14;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 24px;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
     }
-    #splash-overlay.hidden {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-    }
-    .splash-logo {
-        font-size: 4.5em;
-        animation: pulse-glow 2.5s ease-in-out infinite;
-    }
-    @keyframes pulse-glow {
-        0%, 100% { filter: drop-shadow(0 0 20px rgba(102,126,234,0.6)); }
-        50%       { filter: drop-shadow(0 0 45px rgba(102,126,234,1.0)); }
-    }
-    .splash-title {
-        font-family: 'Inter', sans-serif;
-        font-size: 2.6em;
-        font-weight: 800;
-        background: linear-gradient(135deg, #ffffff 0%, #667eea 40%, #f093fb 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        letter-spacing: -1.5px;
-        text-align: center;
-    }
-    .splash-sub {
-        font-family: 'Inter', sans-serif;
-        font-size: 0.95em;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: rgba(200,200,230,0.7);
-        text-align: center;
-    }
-    #server-status {
-        font-family: 'Inter', sans-serif;
-        font-size: 0.82em;
-        font-weight: 600;
-        padding: 6px 16px;
-        border-radius: 20px;
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.12);
-        color: rgba(200,200,230,0.6);
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        transition: all 0.4s ease;
-    }
-    #server-status.ready {
-        background: rgba(16,185,129,0.12);
-        border-color: rgba(16,185,129,0.35);
-        color: #10b981;
-    }
-    .status-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: rgba(200,200,230,0.4);
-        transition: background 0.4s ease;
-    }
-    #server-status.ready .status-dot {
-        background: #10b981;
-        box-shadow: 0 0 6px rgba(16,185,129,0.8);
-    }
+    #splash-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .splash-title { font-size: 2.8em; font-weight: 800; background: linear-gradient(135deg, #fff, #667eea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     #splash-btn {
-        margin-top: 4px;
-        padding: 16px 44px;
-        border-radius: 50px;
-        border: none;
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: #fff;
-        font-family: 'Inter', sans-serif;
-        font-size: 1.1em;
-        font-weight: 700;
-        cursor: pointer;
-        box-shadow: 0 6px 30px rgba(16,185,129,0.45);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-        letter-spacing: 0.5px;
-    }
-    #splash-btn:hover {
-        transform: translateY(-3px) scale(1.03);
-        box-shadow: 0 10px 40px rgba(16,185,129,0.6);
-    }
-    #splash-btn:active {
-        transform: translateY(0) scale(0.98);
-    }
-    .splash-note {
-        font-family: 'Inter', sans-serif;
-        font-size: 0.78em;
-        color: rgba(200,200,230,0.45);
-        text-align: center;
-        max-width: 300px;
+        padding: 16px 44px; border-radius: 50px; border: none;
+        background: linear-gradient(135deg, #10b981, #059669); color: #fff;
+        font-size: 1.1em; font-weight: 700; cursor: pointer;
     }
 </style>
 
 <body>
-    <!-- ── Full-screen splash overlay ─────────────────────────────────── -->
     <div id="splash-overlay">
-        <div class="splash-logo">👀</div>
+        <div style="font-size: 4em;">👀</div>
         <div class="splash-title">SmartDrive Vision</div>
-        <div class="splash-sub">Eye Tracker for Road Safety</div>
-        <div id="server-status">
-            <span class="status-dot"></span>
-            <span id="server-status-text">Warming up server…</span>
-        </div>
-        <button id="splash-btn" onclick="startMonitoring()">&#9654; &nbsp;Start Monitoring</button>
-        <p class="splash-note">Your browser will ask for camera permission — please click Allow.</p>
+        <p style="color: rgba(200,200,230,0.7); letter-spacing: 2px;">Eye Tracker for Road Safety</p>
+        <button id="splash-btn" onclick="startMonitoring()">▶ &nbsp;Start Monitoring</button>
+        <p style="font-size: 0.8em; color: rgba(200,200,230,0.5);">Sila benarkan akses kamera bila pelayar bertanya.</p>
     </div>
-
-    <script>
-        // Ping server in background while user reads splash — warms up Render's free tier
-        (function warmUpServer() {
-            const statusEl = document.getElementById('server-status');
-            const statusText = document.getElementById('server-status-text');
-            let attempts = 0;
-            function ping() {
-                fetch('/data', { cache: 'no-store' })
-                    .then(r => { if (r.ok) {
-                        statusEl.classList.add('ready');
-                        statusText.textContent = 'Server ready ✓';
-                    } else { retry(); } })
-                    .catch(() => { retry(); });
-            }
-            function retry() {
-                attempts++;
-                if (attempts < 10) setTimeout(ping, 3000);
-                else statusText.textContent = 'Click to start anyway';
-            }
-            ping();
-        })();
-    </script>
 
     <div class="container">
         <div class="header">
@@ -783,487 +142,55 @@
                     <video id="client-video" autoplay playsinline muted style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:1; display:none; transform: scaleX(-1); -webkit-transform: scaleX(-1);"></video>
                     <img id="video-stream" src="" alt="Video Stream" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:20px; z-index:10; display:none; transform: scaleX(-1); -webkit-transform: scaleX(-1);">
                     <canvas id="client-canvas" style="display:none;"></canvas>
-                    <!-- Only shown if user denies camera after the splash -->
-                    <div id="camera-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(10,10,20,0.85); border-radius: 20px; z-index: 4;">
+                    <div id="camera-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background: rgba(10,10,20,0.85); border-radius:20px; z-index:4;">
                         <span style="font-size: 3em; margin-bottom: 15px;">🚫</span>
-                        <p style="font-size: 1em; color: #ff8a8c; margin-bottom: 15px; font-weight: 600; text-align:center; padding: 0 20px;">Camera access was denied.<br>Please allow camera in your browser settings and refresh.</p>
+                        <p style="color: #ff8a8c;">Camera access was denied.<br>Please allow camera in settings.</p>
                     </div>
                 </div>
             </div>
 
             <div class="stats-panel">
                 <div class="metric-card">
-                    <div class="metric-label">
-                        <span class="icon">⚠️</span> Status
-                    </div>
+                    <div class="metric-label">⚠️ Status</div>
                     <div id="risk-status" class="metric-value">Awake</div>
-                    <div id="risk-percentage" class="metric-subtitle" style="font-size: 0.9em; margin-top: 5px; opacity: 0.8;">0%</div>
+                    <div id="risk-percentage" style="font-size: 0.9em; opacity: 0.8;">0%</div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-label">
-                        <span class="icon">👁️</span> Eye State
-                    </div>
+                    <div class="metric-label">👁️ Eye State</div>
                     <div id="eye-state" class="metric-value">No Face</div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-label">
-                        <span class="icon">📊</span> EAR (Eye Aspect Ratio)
-                    </div>
+                    <div class="metric-label">📊 EAR (Eye Aspect Ratio)</div>
                     <div id="ear-value" class="metric-value">0.000</div>
-                    <div class="metric-bar">
-                        <div id="ear-bar" class="metric-fill" style="width: 0%"></div>
-                    </div>
+                    <div class="metric-bar"><div id="ear-bar" class="metric-fill" style="width: 0%"></div></div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-label">
-                        <span class="icon">👀</span> PERCLOS
-                    </div>
+                    <div class="metric-label">👀 PERCLOS</div>
                     <div id="perclos-value" class="metric-value">0.0%</div>
-                    <div class="metric-bar">
-                        <div id="perclos-bar" class="metric-fill" style="width: 0%"></div>
-                    </div>
+                    <div class="metric-bar"><div id="perclos-bar" class="metric-fill" style="width: 0%"></div></div>
                 </div>
-
             </div>
         </div>
 
-        <!-- Alert Indicator -->
         <div id="alert-indicator" class="alert-indicator">
             <span id="alert-icon" style="font-size: 1.5em;">⚠️</span>
             <span id="alert-message">Warning</span>
         </div>
 
-        <div class="footer">
-            <p>© 2025 SmartDrive Vision | Powered by MobileNetV2 + EAR + PERCLOS</p>
-        </div>
+        <div class="footer"><p>© 2025 SmartDrive Vision | Powered by MobileNetV2 + EAR + PERCLOS</p></div>
     </div>
 
     <script>
-        // Alert state management
         let lastAlertLevel = 0;
         let lastVoiceAlertTime = 0;
-        const voiceAlertCooldown = 8000; // 8 seconds between voice alerts
-        const synth = window.speechSynthesis;
-        let selectedVoice = null;
-        let lastRiskCategory = '';
-        
-        // Audio elements for sound alerts
         const drowsyAudio = new Audio('/static/drowsy.wav');
         const criticalAudio = new Audio('/static/critical.wav');
-        
-        // Configure audio settings
-        drowsyAudio.volume = 0.7;
-        criticalAudio.volume = 0.9;
-        
-        // Enable looping for continuous playback
-        drowsyAudio.loop = true;
-        criticalAudio.loop = true;
-        
-        // Preload audio files
-        drowsyAudio.preload = 'auto';
-        criticalAudio.preload = 'auto';
-        
-        // Track if audio is unlocked (browser autoplay policy)
-        let audioUnlocked = false;
-        
-        // Unlock audio after first user interaction (browser autoplay policy)
-        function unlockAudio() {
-            if (!audioUnlocked) {
-                // Try to play and immediately pause to unlock audio
-                const playPromise = drowsyAudio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        drowsyAudio.pause();
-                        drowsyAudio.currentTime = 0;
-                        audioUnlocked = true;
-                        console.log('✅ Audio unlocked - sounds can now play');
-                    }).catch(() => {
-                        // Still locked, will unlock on next interaction
-                    });
-                }
-            }
-        }
-        
-        // Unlock audio on any user interaction
-        document.addEventListener('click', unlockAudio, { once: true });
-        document.addEventListener('keydown', unlockAudio, { once: true });
-        document.addEventListener('touchstart', unlockAudio, { once: true });
-        
-        // Handle audio loading errors
-        drowsyAudio.addEventListener('error', function(e) {
-            console.error('Error loading drowsy.wav:', e);
-            console.error('Audio error details:', drowsyAudio.error);
-        });
-        
-        criticalAudio.addEventListener('error', function(e) {
-            console.error('Error loading critical.wav:', e);
-            console.error('Audio error details:', criticalAudio.error);
-        });
-
-        // Load and select best AI-like voice
-        function initializeVoice() {
-            // Wait for voices to load
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = selectBestVoice;
-            }
-            
-            // Try to load voices immediately
-            selectBestVoice();
-        }
-
-        function selectBestVoice() {
-            const voices = speechSynthesis.getVoices();
-            if (voices.length === 0) {
-                console.log('⚠️ No voices available yet, will retry...');
-                return;
-            }
-
-            // Prefer neural/AI voices (usually have "Neural" or "Premium" in name)
-            // Prefer English voices with natural-sounding names
-            const preferredVoices = [
-                'Microsoft Zira',           // Windows (female, natural)
-                'Microsoft David',          // Windows (male, natural)
-                'Microsoft Mark',          // Windows (male, natural)
-                'Google US English',       // Chrome (neural)
-                'Samantha',                // macOS (female, natural)
-                'Alex',                    // macOS (male, natural)
-                'Google UK English Female',// Chrome (neural)
-                'Google UK English Male',  // Chrome (neural)
-            ];
-
-            // Try to find preferred voice by name match
-            for (const preferred of preferredVoices) {
-                const voice = voices.find(v => 
-                    v.name.includes(preferred) && v.lang.startsWith('en')
-                );
-                if (voice) {
-                    selectedVoice = voice;
-                    console.log('✅ Selected AI voice:', voice.name, '(' + voice.lang + ')');
-                    return;
-                }
-            }
-
-            // Fallback: find any English neural/premium voice
-            const neuralVoice = voices.find(v => 
-                (v.name.toLowerCase().includes('neural') || 
-                 v.name.toLowerCase().includes('premium') ||
-                 v.name.toLowerCase().includes('enhanced') ||
-                 v.name.toLowerCase().includes('natural')) &&
-                v.lang.startsWith('en')
-            );
-            
-            if (neuralVoice) {
-                selectedVoice = neuralVoice;
-                console.log('✅ Selected neural voice:', neuralVoice.name);
-                return;
-            }
-
-            // Final fallback: any English voice (prefer female for alerts)
-            const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-            if (englishVoices.length > 0) {
-                // Prefer female voices for alerts
-                const femaleVoice = englishVoices.find(v => 
-                    v.name.toLowerCase().includes('female') || 
-                    v.name.toLowerCase().includes('zira') ||
-                    v.name.toLowerCase().includes('samantha')
-                );
-                selectedVoice = femaleVoice || englishVoices[0];
-                console.log('✅ Selected fallback voice:', selectedVoice.name);
-            } else {
-                console.warn('⚠️ No English voices found');
-            }
-        }
-
-        // Initialize voice on page load
-        initializeVoice();
-        // Also try after a short delay (voices may load asynchronously)
-        setTimeout(selectBestVoice, 500);
-
-        // Progressive alert messages
-        const alertMessages = {
-            1: { icon: '⚠️', message: 'Warning: Stay Alert', voice: null }, // Visual only
-            2: { icon: '🔊', message: 'Voice Alert: Please keep your eyes on the road', voice: 'Please keep your eyes on the road' },
-            3: { icon: '🚨', message: 'CRITICAL: DROWSINESS DETECTED!', voice: 'Warning! Drowsiness detected. Please pull over immediately!' }
-        };
-
-        function triggerAlert(alertLevel) {
-            const alertIndicator = document.getElementById('alert-indicator');
-            const alertIcon = document.getElementById('alert-icon');
-            const alertMessage = document.getElementById('alert-message');
-            
-            if (alertLevel === 0) {
-                // No alert - hide indicator
-                alertIndicator.classList.remove('show', 'visual', 'voice', 'critical');
-                return;
-            }
-
-            const alert = alertMessages[alertLevel];
-            if (!alert) return;
-
-            // Update visual indicator
-            alertIcon.textContent = alert.icon;
-            alertMessage.textContent = alert.message;
-            
-            // Remove all classes and add appropriate one
-            alertIndicator.classList.remove('visual', 'voice', 'critical');
-            if (alertLevel === 1) {
-                alertIndicator.classList.add('show', 'visual');
-            } else if (alertLevel === 2) {
-                alertIndicator.classList.add('show', 'voice');
-                // Trigger voice alert
-                triggerVoiceAlert(alert.voice);
-            } else if (alertLevel === 3) {
-                alertIndicator.classList.add('show', 'critical');
-                // Trigger critical alert (voice + vibration)
-                triggerVoiceAlert(alert.voice);
-                triggerVibration();
-            }
-        }
-
-        function triggerVoiceAlert(message) {
-            const now = Date.now();
-            if (now - lastVoiceAlertTime < voiceAlertCooldown) {
-                return; // Still in cooldown
-            }
-            lastVoiceAlertTime = now;
-
-            if (!('speechSynthesis' in window)) {
-                console.warn('⚠️ Speech synthesis not supported in this browser');
-                return;
-            }
-
-            if (!message) {
-                console.warn('⚠️ No message provided for voice alert');
-                return;
-            }
-
-            // Make sure we have a voice selected
-            if (!selectedVoice) {
-                selectBestVoice();
-                // If still no voice after selection, wait a bit and try again
-                if (!selectedVoice) {
-                    setTimeout(() => {
-                        selectBestVoice();
-                        if (selectedVoice) {
-                            triggerVoiceAlert(message);
-                        }
-                    }, 500);
-                    return;
-                }
-            }
-
-            // Cancel any ongoing speech
-            synth.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(message);
-            
-            // Use selected AI voice
-            if (selectedVoice) {
-                utterance.voice = selectedVoice;
-                utterance.lang = selectedVoice.lang;
-            } else {
-                utterance.lang = 'en-US';
-            }
-            
-            // Optimize for natural AI-like speech
-            utterance.volume = 1.0;        // Full volume for clarity
-            utterance.rate = 0.92;         // Slightly slower for natural, clear pace
-            utterance.pitch = 1.0;         // Natural pitch
-            
-            // Event handlers for debugging and user feedback
-            utterance.onstart = () => {
-                console.log('🔊 AI Voice alert playing:', message);
-                console.log('   Voice:', selectedVoice ? selectedVoice.name : 'default');
-            };
-            
-            utterance.onend = () => {
-                console.log('✅ Voice alert completed');
-            };
-            
-            utterance.onerror = (event) => {
-                console.error('❌ Voice alert error:', event.error, event.type);
-                // Don't show alert popup - just log it
-                // Try to reselect voice for next time
-                selectedVoice = null;
-                selectBestVoice();
-            };
-            
-            try {
-                synth.speak(utterance);
-            } catch (error) {
-                console.error('❌ Error calling speechSynthesis.speak:', error);
-            }
-        }
-
-        function triggerVibration() {
-            // Vibration API (if available on mobile devices)
-            if ('vibrate' in navigator) {
-                // Pattern: vibrate for 200ms, pause 100ms, vibrate 200ms, pause 100ms, vibrate 200ms
-                navigator.vibrate([200, 100, 200, 100, 200]);
-            }
-        }
-
-        // Update detection data every 100ms
-        setInterval(function() {
-            fetch('/data')
-                .then(response => response.json())
-                .then(data => {
-                    // Update Status (Awake/Drowsy/Critical/ERROR) based on risk_score
-                    const riskScore = data.risk_score || 0;
-                    const riskCategory = data.risk_category || 'Awake';
-                    const riskStatusElement = document.getElementById('risk-status');
-                    const riskPercentageElement = document.getElementById('risk-percentage');
-                    
-                    // Play sound alerts when status changes to Drowsy or Critical (with auto-replay/loop)
-                    if (riskCategory !== lastRiskCategory) {
-                        console.log('Status changed from', lastRiskCategory, 'to', riskCategory);
-                        
-                        // Stop any currently playing sounds
-                        drowsyAudio.pause();
-                        drowsyAudio.currentTime = 0;
-                        criticalAudio.pause();
-                        criticalAudio.currentTime = 0;
-                        
-                        if (riskCategory === 'Drowsy') {
-                            // Play drowsy.wav (will loop automatically)
-                            console.log('Attempting to play drowsy.wav (looping)...');
-                            // Try to unlock audio if not already unlocked
-                            unlockAudio();
-                            drowsyAudio.play().then(() => {
-                                console.log('✅ drowsy.wav playing successfully (looping)');
-                                audioUnlocked = true;
-                            }).catch(error => {
-                                console.warn('⚠️ Could not play drowsy.wav (may need user interaction):', error);
-                                // Audio will work after user clicks/touches the page
-                            });
-                        } else if (riskCategory === 'Critical') {
-                            // Play critical.wav (will loop automatically)
-                            console.log('Attempting to play critical.wav (looping)...');
-                            // Try to unlock audio if not already unlocked
-                            unlockAudio();
-                            criticalAudio.play().then(() => {
-                                console.log('✅ critical.wav playing successfully (looping)');
-                                audioUnlocked = true;
-                            }).catch(error => {
-                                console.warn('⚠️ Could not play critical.wav (may need user interaction):', error);
-                                // Audio will work after user clicks/touches the page
-                            });
-                        } else {
-                            // Not Drowsy or Critical - stop all sounds
-                            drowsyAudio.pause();
-                            drowsyAudio.currentTime = 0;
-                            criticalAudio.pause();
-                            criticalAudio.currentTime = 0;
-                        }
-                        lastRiskCategory = riskCategory;
-                    } else {
-                        // Status hasn't changed, but make sure correct audio is playing
-                        if (riskCategory === 'Drowsy' && drowsyAudio.paused) {
-                            // Status is Drowsy but audio stopped - restart it
-                            unlockAudio();
-                            drowsyAudio.play().catch(() => {});
-                        } else if (riskCategory === 'Critical' && criticalAudio.paused) {
-                            // Status is Critical but audio stopped - restart it
-                            unlockAudio();
-                            criticalAudio.play().catch(() => {});
-                        } else if (riskCategory !== 'Drowsy' && riskCategory !== 'Critical') {
-                            // Status is not Drowsy or Critical - make sure sounds are stopped
-                            if (!drowsyAudio.paused) {
-                                drowsyAudio.pause();
-                                drowsyAudio.currentTime = 0;
-                            }
-                            if (!criticalAudio.paused) {
-                                criticalAudio.pause();
-                                criticalAudio.currentTime = 0;
-                            }
-                        }
-                    }
-                    
-                    // Update status text and percentage
-                    riskStatusElement.textContent = riskCategory;
-                    riskPercentageElement.textContent = riskScore.toFixed(1) + '%';
-                    
-                    // Update styling based on category (0-39: Awake, 40-69: Drowsy, 70-100: Critical, ERROR)
-                    riskStatusElement.classList.remove('alert', 'drowsy', 'error', 'critical');
-                    riskPercentageElement.classList.remove('alert', 'drowsy', 'error', 'critical');
-                    
-                    if (riskCategory === 'ERROR') {
-                        riskStatusElement.style.color = '#f59e0b'; // Orange/Yellow
-                        riskPercentageElement.style.color = '#f59e0b';
-                        riskStatusElement.classList.add('error');
-                        riskPercentageElement.classList.add('error');
-                    } else if (riskCategory === 'Awake') {
-                        riskStatusElement.style.color = '#10b981'; // Green
-                        riskPercentageElement.style.color = '#10b981';
-                        riskStatusElement.classList.add('alert');
-                        riskPercentageElement.classList.add('alert');
-                    } else if (riskCategory === 'Drowsy') {
-                        riskStatusElement.style.color = '#f59e0b'; // Yellow/Orange
-                        riskPercentageElement.style.color = '#f59e0b';
-                        riskStatusElement.classList.add('drowsy');
-                        riskPercentageElement.classList.add('drowsy');
-                    } else if (riskCategory === 'Critical') {
-                        riskStatusElement.style.color = '#ef4444'; // Red
-                        riskPercentageElement.style.color = '#ef4444';
-                        riskStatusElement.classList.add('critical');
-                        riskPercentageElement.classList.add('critical');
-                    }
-
-                    // Handle progressive alerts
-                    const alertLevel = data.alert_level || 0;
-                    if (alertLevel !== lastAlertLevel) {
-                        triggerAlert(alertLevel);
-                        lastAlertLevel = alertLevel;
-                    }
-
-                    // Update eye state
-                    document.getElementById('eye-state').textContent = data.eye_state || 'No Face';
-
-                    // Update EAR
-                    const earValue = data.ear || 0;
-                    document.getElementById('ear-value').textContent = earValue.toFixed(3);
-                    
-                    // EAR bar (normalized to 0-0.5 range, typical EAR is 0.15-0.4)
-                    const earPercent = Math.min((earValue / 0.4) * 100, 100);
-                    document.getElementById('ear-bar').style.width = earPercent + '%';
-                    
-                    // Update PERCLOS
-                    const perclosValue = data.perclos || 0;
-                    document.getElementById('perclos-value').textContent = perclosValue.toFixed(1) + '%';
-                    
-                    // PERCLOS bar (0-100%)
-                    const perclosPercent = Math.min(perclosValue, 100);
-                    document.getElementById('perclos-bar').style.width = perclosPercent + '%';
-                    
-                    // Update PERCLOS bar color based on threshold (20% is threshold)
-                    const perclosBar = document.getElementById('perclos-bar');
-                    perclosBar.classList.remove('warning', 'danger');
-                    if (perclosPercent > 20) {
-                        perclosBar.classList.add('danger');
-                    } else if (perclosPercent > 10) {
-                        perclosBar.classList.add('warning');
-                    }
-                    const earBar = document.getElementById('ear-bar');
-                    earBar.style.width = earPercent + '%';
-                    
-                    // Color coding for EAR
-                    if (earValue < 0.15) {
-                        earBar.className = 'metric-fill danger';
-                    } else if (earValue < 0.22) {
-                        earBar.className = 'metric-fill warning';
-                    } else {
-                        earBar.className = 'metric-fill';
-                    }
-                });
-        }, 100);
+        drowsyAudio.loop = true; criticalAudio.loop = true;
 
         let isClientCamActive = false;
-        let clientMediaStream = null;
-        let sendFrameInterval = null;
-        let serverPollInterval = null;
         let isProcessingFrame = false;
 
         function updateUIState(data) {
@@ -1273,47 +200,17 @@
             const riskStatusElement = document.getElementById('risk-status');
             const riskPercentageElement = document.getElementById('risk-percentage');
             
-            if (riskCategory === 'Drowsy' && drowsyAudio.paused) {
-                unlockAudio();
-                drowsyAudio.play().catch(() => {});
-            } else if (riskCategory === 'Critical' && criticalAudio.paused) {
-                unlockAudio();
-                criticalAudio.play().catch(() => {});
-            } else if (riskCategory !== 'Drowsy' && riskCategory !== 'Critical') {
-                if (!drowsyAudio.paused) {
-                    drowsyAudio.pause();
-                    drowsyAudio.currentTime = 0;
-                }
-                if (!criticalAudio.paused) {
-                    criticalAudio.pause();
-                    criticalAudio.currentTime = 0;
-                }
-            }
-
             riskStatusElement.textContent = riskCategory;
             riskPercentageElement.textContent = riskScore.toFixed(1) + '%';
             
-            riskStatusElement.classList.remove('alert', 'drowsy', 'error', 'critical');
-            riskPercentageElement.classList.remove('alert', 'drowsy', 'error', 'critical');
-
-            if (riskCategory === 'ERROR') {
-                riskStatusElement.style.color = '#f59e0b';
-                riskPercentageElement.style.color = '#f59e0b';
-            } else if (riskCategory === 'Awake') {
+            if (riskCategory === 'Awake') {
                 riskStatusElement.style.color = '#10b981';
-                riskPercentageElement.style.color = '#10b981';
             } else if (riskCategory === 'Drowsy') {
                 riskStatusElement.style.color = '#f59e0b';
-                riskPercentageElement.style.color = '#f59e0b';
             } else if (riskCategory === 'Critical') {
                 riskStatusElement.style.color = '#ef4444';
-                riskPercentageElement.style.color = '#ef4444';
-            }
-
-            const alertLevel = data.alert_level || 0;
-            if (alertLevel !== lastAlertLevel) {
-                triggerAlert(alertLevel);
-                lastAlertLevel = alertLevel;
+            } else {
+                riskStatusElement.style.color = '#f59e0b';
             }
 
             document.getElementById('eye-state').textContent = data.eye_state || 'No Face';
@@ -1326,7 +223,7 @@
             
             if (earValue < 0.15) {
                 earBar.className = 'metric-fill danger';
-            } else if (earValue < 0.22) {
+            } else if (earValue < 0.20) {
                 earBar.className = 'metric-fill warning';
             } else {
                 earBar.className = 'metric-fill';
@@ -1334,15 +231,7 @@
 
             const perclosValue = data.perclos || 0;
             document.getElementById('perclos-value').textContent = perclosValue.toFixed(1) + '%';
-            const perclosPercent = Math.min(perclosValue, 100);
-            const perclosBar = document.getElementById('perclos-bar');
-            perclosBar.style.width = perclosPercent + '%';
-            perclosBar.classList.remove('warning', 'danger');
-            if (perclosPercent > 20) {
-                perclosBar.classList.add('danger');
-            } else if (perclosPercent > 10) {
-                perclosBar.classList.add('warning');
-            }
+            document.getElementById('perclos-bar').style.width = Math.min(perclosValue, 100) + '%';
         }
 
         async function initAutoCamera() {
@@ -1353,29 +242,14 @@
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
                 });
-                clientMediaStream = stream;
                 videoEl.srcObject = stream;
                 videoEl.style.display = 'block';
-                videoEl.style.position = 'absolute';
-                videoEl.style.width = '100%';
-                videoEl.style.height = '100%';
-                videoEl.style.objectFit = 'cover';
                 videoEl.style.zIndex = '1';
-                videoEl.style.transform = 'scaleX(-1)';
-                videoEl.style.webkitTransform = 'scaleX(-1)';
                 
                 const streamImg = document.getElementById('video-stream');
                 if (streamImg) {
                     streamImg.style.display = 'block';
-                    streamImg.style.position = 'absolute';
-                    streamImg.style.top = '0';
-                    streamImg.style.left = '0';
-                    streamImg.style.width = '100%';
-                    streamImg.style.height = '100%';
-                    streamImg.style.objectFit = 'cover';
                     streamImg.style.zIndex = '10';
-                    streamImg.style.transform = 'scaleX(-1)';
-                    streamImg.style.webkitTransform = 'scaleX(-1)';
                 }
                 
                 await videoEl.play();
@@ -1387,8 +261,7 @@
                 canvasEl.width = 640;
                 canvasEl.height = 480;
 
-                if (sendFrameInterval) clearInterval(sendFrameInterval);
-                sendFrameInterval = setInterval(() => {
+                setInterval(() => {
                     if (!isClientCamActive || isProcessingFrame) return;
                     if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) return;
 
@@ -1408,33 +281,22 @@
                         if (data.annotated_image && streamImg) {
                             streamImg.src = data.annotated_image;
                             streamImg.style.display = 'block';
+                            streamImg.style.zIndex = '10';
                         }
                     })
                     .catch(err => {
                         isProcessingFrame = false;
-                        console.error('Frame processing error:', err);
                     });
                 }, 120);
 
             } catch (err) {
-                console.warn('Browser webcam unavailable or permission denied:', err);
                 if (overlay) overlay.style.display = 'flex';
             }
         }
 
-        // Called by the splash "Start Monitoring" button
         function startMonitoring() {
             const splash = document.getElementById('splash-overlay');
-            const btn = document.getElementById('splash-btn');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'Starting…';
-            }
-            
-            // Start the camera (browser prompts for permission)
             initAutoCamera();
-            
-            // Immediately transition to the main dashboard UI
             if (splash) splash.classList.add('hidden');
         }
     </script>
