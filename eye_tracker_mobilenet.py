@@ -481,65 +481,44 @@ class DrowsinessDetector:
         return closed_count / len(self.ear_history)
     
     def calculate_head_pose(self, landmarks, h, w):
-        """Calculate head pose (pitch, yaw, roll) from face landmarks"""
+        """Calculate head pose (pitch, yaw, roll) from face landmarks with proper geometric normalization"""
         try:
-            # Key facial points for head pose estimation
-            # Nose tip
-            nose_tip = np.array([
-                landmarks.landmark[1].x * w,
-                landmarks.landmark[1].y * h
-            ])
-            # Chin
-            chin = np.array([
-                landmarks.landmark[175].x * w,
-                landmarks.landmark[175].y * h
-            ])
-            # Left eye corner
-            left_eye = np.array([
-                landmarks.landmark[33].x * w,
-                landmarks.landmark[33].y * h
-            ])
-            # Right eye corner
-            right_eye = np.array([
-                landmarks.landmark[263].x * w,
-                landmarks.landmark[263].y * h
-            ])
-            # Forehead center
-            forehead = np.array([
-                landmarks.landmark[10].x * w,
-                landmarks.landmark[10].y * h
-            ])
+            nose_tip = np.array([landmarks.landmark[1].x * w, landmarks.landmark[1].y * h])
+            chin = np.array([landmarks.landmark[175].x * w, landmarks.landmark[175].y * h])
+            forehead = np.array([landmarks.landmark[10].x * w, landmarks.landmark[10].y * h])
+            left_eye = np.array([landmarks.landmark[33].x * w, landmarks.landmark[33].y * h])
+            right_eye = np.array([landmarks.landmark[263].x * w, landmarks.landmark[263].y * h])
             
-            # Calculate angles
-            # Yaw (left-right rotation) - based on eye horizontal position
-            eye_center = (left_eye + right_eye) / 2
-            face_center_x = nose_tip[0]
-            eye_center_x = eye_center[0]
-            yaw = abs(face_center_x - eye_center_x) / max(w, h) * 100  # Normalized
+            face_width = max(10.0, np.linalg.norm(right_eye - left_eye))
+            face_height = max(10.0, np.linalg.norm(chin - forehead))
             
-            # Pitch (up-down rotation) - based on vertical position of nose vs eyes
-            nose_eye_y_diff = nose_tip[1] - eye_center[1]
-            pitch = abs(nose_eye_y_diff) / max(w, h) * 100  # Normalized
+            # Yaw (left-right turn): displacement of nose from eye midpoint
+            eye_center = (left_eye + right_eye) / 2.0
+            yaw_ratio = abs(nose_tip[0] - eye_center[0]) / face_width
+            yaw = max(0.0, (yaw_ratio - 0.12) * 100)  # Ignore normal center variance < 12%
             
-            # Roll (tilt) - angle between eyes horizontal line
+            # Pitch (up-down nod): baseline vertical nose position is ~38% of face height
+            nose_y_ratio = (nose_tip[1] - eye_center[1]) / face_height
+            pitch_dev = abs(nose_y_ratio - 0.38)
+            pitch = max(0.0, (pitch_dev - 0.12) * 100)  # Ignore normal vertical eye-nose position
+            
+            # Roll (tilt): angle between left and right eye corners
             eye_vec = right_eye - left_eye
-            roll = np.degrees(np.arctan2(eye_vec[1], eye_vec[0]))
+            roll_deg = abs(np.degrees(np.arctan2(eye_vec[1], eye_vec[0])))
+            roll = max(0.0, roll_deg - 10.0)  # Ignore slight tilt < 10 deg
             
             return {
                 'pitch': pitch,
                 'yaw': yaw,
-                'roll': abs(roll)
+                'roll': roll
             }
         except:
             return {'pitch': 0, 'yaw': 0, 'roll': 0}
     
     def calculate_gaze_deviation(self, head_pose):
         """Calculate gaze deviation score (0-100)"""
-        # Combine pitch and yaw to get total deviation
         deviation = (head_pose['pitch'] + head_pose['yaw']) / 2.0
-        # Normalize to 0-100 (threshold: 15% deviation is dangerous)
-        deviation_score = min(100, (deviation / 15.0) * 100)
-        return deviation_score
+        return min(100.0, max(0.0, deviation * 2.0))
     
     def track_blink_frequency(self, eye_state):
         """Track blink frequency (blinks per minute)"""
@@ -553,24 +532,19 @@ class DrowsinessDetector:
         
         # Reset window if time elapsed
         if current_time - self.blink_window_start >= self.blink_window_duration:
-            # Calculate blinks per minute
             elapsed = current_time - self.blink_window_start
             if elapsed > 0:
                 blinks_per_minute = (self.blink_count / elapsed) * 60
             else:
                 blinks_per_minute = 0
             
-            # Reset
             self.blink_count = 0
             self.blink_window_start = current_time
-            
             return blinks_per_minute
         
-        # Return None if window not complete yet
-        if current_time - self.blink_window_start < 2.0:  # Need at least 2 seconds
+        if current_time - self.blink_window_start < 2.0:
             return None
         
-        # Calculate current rate
         elapsed = current_time - self.blink_window_start
         if elapsed > 0:
             return (self.blink_count / elapsed) * 60
@@ -580,59 +554,44 @@ class DrowsinessDetector:
                            eye_closure_duration, blink_frequency, driving_duration):
         """
         Calculate Driver Risk Index (0-100)
-        Based on multiple factors:
-        - Eye closure duration (0-30 points)
-        - Blink frequency (0-20 points)
-        - Gaze deviation (0-20 points)
-        - Head pose (0-15 points)
-        - Time of continuous driving (0-15 points)
+        Eye closure and physiological drowsiness are primary drivers.
         """
         risk_score = 0.0
         
-        # 1. Eye closure duration (0-30 points)
-        # Only count closures longer than blink threshold (ignore normal blinks < 0.4s)
+        # 1. Eye closure duration (0-40 points)
         if eye_closure_duration > BLINK_DURATION_THRESHOLD:
-            # Calculate risk based on duration beyond blink threshold
-            # 3+ seconds beyond blink threshold = max risk (30 points)
             effective_duration = eye_closure_duration - BLINK_DURATION_THRESHOLD
-            closure_risk = min(30, (effective_duration / 3.0) * 30)
+            closure_risk = min(40.0, (effective_duration / 2.5) * 40.0)
             risk_score += closure_risk
         
-        # 2. PERCLOS factor (overlaps with closure duration, but adds risk)
-        if perclos > 0.3:  # 30% closure
-            risk_score += min(20, perclos * 50)
+        # 2. PERCLOS factor (0-30 points)
+        if perclos > 0.15:
+            perclos_risk = min(30.0, ((perclos - 0.15) / 0.25) * 30.0)
+            risk_score += perclos_risk
         
-        # 3. Blink frequency (0-20 points)
-        if blink_frequency is not None:
-            # Normal: 15-20 blinks/min
-            # Too low (<10): drowsy (high risk)
-            # Too high (>30): stressed or irritated (moderate risk)
-            if blink_frequency < 10:
-                blink_risk = 20 - (blink_frequency / 10.0) * 20  # Inverse: lower = higher risk
-            elif blink_frequency > 30:
-                blink_risk = min(15, (blink_frequency - 30) / 30.0 * 15)
-            else:
-                blink_risk = 0  # Normal range
-            risk_score += blink_risk
-        
-        # 4. Gaze deviation (0-20 points)
+        # 3. Gaze & Head deviation (0-15 points) - only if genuinely turned away
         gaze_deviation = self.calculate_gaze_deviation(head_pose)
-        risk_score += min(20, gaze_deviation)
+        if gaze_deviation > 10:
+            risk_score += min(10.0, (gaze_deviation / 50.0) * 10.0)
+        if head_pose['roll'] > 5:
+            risk_score += min(5.0, (head_pose['roll'] / 30.0) * 5.0)
         
-        # 5. Head pose deviation (0-15 points)
-        # Roll (tilt) is particularly dangerous
-        roll_risk = min(10, (head_pose['roll'] / 45.0) * 10)  # 45 degrees = max risk
-        yaw_pitch_risk = min(5, ((head_pose['yaw'] + head_pose['pitch']) / 30.0) * 5)
-        risk_score += roll_risk + yaw_pitch_risk
+        # 4. Blink frequency anomaly (0-10 points) - only after tracking session is established
+        if blink_frequency is not None and self.total_frames > 60:
+            if blink_frequency < 6:
+                risk_score += min(10.0, (6 - blink_frequency) * 1.5)
+            elif blink_frequency > 35:
+                risk_score += min(8.0, (blink_frequency - 35) / 20.0 * 8.0)
         
-        # 6. Time of continuous driving (0-15 points)
-        # After 2 hours, risk increases
-        if driving_duration > 7200:  # 2 hours = 7200 seconds
-            driving_risk = min(15, ((driving_duration - 7200) / 3600.0) * 15)  # +15 per hour after 2h
-            risk_score += driving_risk
+        # 5. Continuous driving duration (0-10 points)
+        if driving_duration > 7200:
+            risk_score += min(10.0, ((driving_duration - 7200) / 3600.0) * 10.0)
         
-        # Cap at 100
-        return min(100, risk_score)
+        # Safe clamp: If eyes are Open and PERCLOS is low, risk is strictly constrained to safe level
+        if eye_state == "Open" and perclos < 0.18 and eye_closure_duration == 0:
+            risk_score = min(20.0, risk_score)
+            
+        return min(100.0, risk_score)
     
     def get_alert_level_from_risk(self, risk_score, previous_alert_level):
         """
@@ -723,21 +682,24 @@ class DrowsinessDetector:
                 self._calib_ear_samples.append(current_ear)
             if current_time - self._calib_start_time >= self._calib_duration and len(self._calib_ear_samples) >= 5:
                 baseline = float(np.median(self._calib_ear_samples))
-                self.ear_threshold = max(0.13, min(0.23, round(baseline * 0.72, 3)))
+                self.ear_threshold = max(0.12, min(0.20, round(baseline * 0.70, 3)))
                 self._calibrating = False
                 print(f"[Auto-Calibration] Baseline EAR: {baseline:.3f} | Dynamic Threshold: {self.ear_threshold:.3f}")
+            else:
+                # During calibration, keep safe Awake state
+                return (False, "Open", current_ear, 0.0, landmarks, 5.0, "Awake", 0)
         
         # Update EAR history for PERCLOS
         self.ear_history.append(current_ear)
         perclos = self.calculate_perclos()
         
         # Determine eye state using Intelligent Multi-Modal Fusion (EAR + MobileNet)
-        active_threshold = getattr(self, 'ear_threshold', EAR_THRESHOLD)
+        active_threshold = getattr(self, 'ear_threshold', 0.15)
         left_eye_width = ear_features[3] if len(ear_features) > 3 else 50
         right_eye_width = ear_features[5] if len(ear_features) > 5 else 50
         avg_eye_width = (left_eye_width + right_eye_width) / 2.0 if (left_eye_width + right_eye_width) > 0 else 50
         if avg_eye_width < 35:
-            active_threshold = active_threshold * 0.88
+            active_threshold = active_threshold * 0.90
             
         ear_closed = current_ear < active_threshold
         ear_ambiguous = (active_threshold <= current_ear <= active_threshold * 1.30)
@@ -755,12 +717,11 @@ class DrowsinessDetector:
                     else:
                         ear_features_scaled = np.array([ear_features])
                     eye_pred = self.eye_model.predict([face_processed, ear_features_scaled], verbose=0)
-                    # Class 0: Closed, Class 1: Open
                     prob_closed = float(eye_pred[0][0])
                     prob_open = float(eye_pred[0][1])
-                    if prob_closed > 0.55:
+                    if prob_closed > 0.65:
                         model_state = "Closed"
-                    elif prob_open > 0.55:
+                    elif prob_open > 0.65:
                         model_state = "Open"
             except Exception as e:
                 pass
@@ -782,7 +743,6 @@ class DrowsinessDetector:
             self.ear_counter = 0
         
         # Track drowsiness duration - only alert after 3 seconds
-        current_time = time.time()
         is_drowsy = False  # Initialize
         
         # Track eye closure duration for risk scoring (calculate BEFORE checking drowsiness)
@@ -793,43 +753,32 @@ class DrowsinessDetector:
             self.max_eye_closure_duration = max(self.max_eye_closure_duration, eye_closure_duration)
         else:
             if self.eye_closure_start_time is not None:
-                # Eyes just opened, reset
                 self.eye_closure_start_time = None
             eye_closure_duration = 0.0
         
-        # Determine if drowsy (but don't alert immediately)
-        # Drowsy if: eyes closed for longer than blink threshold OR high PERCLOS
-        # Normal blinks (< 0.4s) should NOT trigger drowsiness
+        # Determine if drowsy
         is_drowsy_condition = False
         if eye_state == "Closed":
-            # Only consider it drowsy if closure duration exceeds blink threshold (filter out normal blinks)
             if eye_closure_duration > BLINK_DURATION_THRESHOLD:
                 is_drowsy_condition = True
-            # If eyes just closed (< 0.4s), it's likely a blink - don't trigger drowsiness
         elif perclos > PERCLOS_THRESHOLD:
-            # PERCLOS already filters out short blinks over a window, so this is reliable
             is_drowsy_condition = True
         
         if is_drowsy_condition:
             if self.drowsiness_start_time is None:
-                # First frame of drowsiness - start timer
                 self.drowsiness_start_time = current_time
-                is_drowsy = False  # Not drowsy yet, still in delay
+                is_drowsy = False
             else:
-                # Check if 3 seconds have passed
                 drowsiness_duration = current_time - self.drowsiness_start_time
                 if drowsiness_duration >= self.DROWSINESS_DELAY:
-                    # 3 seconds passed - now trigger alert
                     is_drowsy = True
                     self.play_alert(continuous=True)
                 else:
-                    # Still in delay period - don't alert yet
                     is_drowsy = False
         else:
-            # Not drowsy - reset timer and stop alert
             self.drowsiness_start_time = None
             is_drowsy = False
-            self.play_alert(continuous=False)  # This will stop the alert
+            self.play_alert(continuous=False)
         
         # Calculate head pose and gaze deviation
         head_pose = self.calculate_head_pose(landmarks, h, w)
@@ -850,14 +799,19 @@ class DrowsinessDetector:
         # Determine alert level based on risk score
         self.alert_level = self.get_alert_level_from_risk(risk_score, self.alert_level)
         
-        # Determine risk category based on risk_score (0-100)
-        # 0-39: Awake, 40-69: Drowsy, 70-100: Critical
-        if risk_score <= 39:
+        # Determine risk category:
+        # Open eyes with low PERCLOS are strictly Awake
+        if is_drowsy or (eye_state == "Closed" and eye_closure_duration >= 1.2) or perclos >= 0.25:
+            if risk_score >= 60 or eye_closure_duration >= 2.5:
+                risk_category = "Critical"
+            else:
+                risk_category = "Drowsy"
+        elif eye_state == "Open" and perclos < 0.20:
             risk_category = "Awake"
-        elif risk_score <= 69:
+        elif risk_score >= 45:
             risk_category = "Drowsy"
         else:
-            risk_category = "Critical"
+            risk_category = "Awake"
         
         self.total_frames += 1
         
