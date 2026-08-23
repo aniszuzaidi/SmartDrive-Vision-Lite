@@ -110,17 +110,25 @@ def _create_video_capture():
     return _OpenCVCapture(cap)
 
 # Constants
-EAR_THRESHOLD = 0.22  # Eye Aspect Ratio threshold for closed eyes (lowered for small eyes)
+EAR_THRESHOLD = 0.18  # Eye Aspect Ratio threshold for closed eyes (optimized for Asian & hooded eyes)
 EAR_CONSECUTIVE_FRAMES = 3  # Number of consecutive frames for eye closure
-PERCLOS_THRESHOLD = 0.2  # PERCLOS threshold (20% eye closure over time)
+PERCLOS_THRESHOLD = 0.20  # PERCLOS threshold (20% eye closure over time)
 FRAME_WINDOW = 30  # Number of frames to calculate PERCLOS over
 IMG_SIZE = 224  # MobileNetV2 input size
-MIN_EAR_FOR_OPEN = 0.15  # Minimum EAR to consider eye as definitely open (handles small eyes)
+MIN_EAR_FOR_OPEN = 0.05  # Minimum EAR to consider eye as open
 BLINK_DURATION_THRESHOLD = 0.4  # Minimum eye closure duration (seconds) to be considered drowsy (blinks are < 0.4s)
 
 # MediaPipe face mesh indices
 LEFT_EYE_INDICES = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_INDICES = [362, 385, 387, 263, 373, 380]
+
+# Full detailed contours for rich visualization
+FULL_LEFT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
+FULL_RIGHT_EYE = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
+LEFT_EYEBROW = [70, 63, 105, 66, 107]
+RIGHT_EYEBROW = [336, 296, 334, 293, 300]
+LEFT_IRIS = 468
+RIGHT_IRIS = 473
 
 class DrowsinessDetector:
     def __init__(self, use_mobilenet=True):
@@ -145,8 +153,8 @@ class DrowsinessDetector:
             static_image_mode=False,
             max_num_faces=1,
             refine_landmarks=True,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+            min_detection_confidence=0.3,
+            min_tracking_confidence=0.3
         )
         
         try:
@@ -162,7 +170,7 @@ class DrowsinessDetector:
 
         self.face_detection = self.mp_face_detection.FaceDetection(
             model_selection=0,
-            min_detection_confidence=0.5
+            min_detection_confidence=0.3
         )
         
         # Load MobileNetV2 models if available
@@ -316,8 +324,29 @@ class DrowsinessDetector:
         
         return ear
     
-    def extract_face_roi(self, frame):
-        """Extract face ROI for MobileNetV2"""
+    def extract_face_roi(self, frame, landmarks=None):
+        """Extract face ROI for MobileNetV2 using landmarks or face detection"""
+        h, w, _ = frame.shape
+        
+        # Method 1: Extract directly from landmarks (fast & 100% reliable)
+        if landmarks is not None:
+            try:
+                xs = [landmarks.landmark[i].x * w for i in range(len(landmarks.landmark))]
+                ys = [landmarks.landmark[i].y * h for i in range(len(landmarks.landmark))]
+                x_min, x_max = int(min(xs)), int(max(xs))
+                y_min, y_max = int(min(ys)), int(max(ys))
+                pad = int(max(x_max - x_min, y_max - y_min) * 0.1)
+                x1 = max(0, x_min - pad)
+                y1 = max(0, y_min - pad)
+                x2 = min(w, x_max + pad)
+                y2 = min(h, y_max + pad)
+                face_roi = frame[y1:y2, x1:x2]
+                if face_roi.size > 0:
+                    return cv2.resize(face_roi, (IMG_SIZE, IMG_SIZE))
+            except Exception:
+                pass
+        
+        # Method 2: Fallback to face_detection
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_detection.process(rgb_frame)
         
@@ -326,7 +355,6 @@ class DrowsinessDetector:
         
         detection = results.detections[0]
         bbox = detection.location_data.relative_bounding_box
-        h, w, _ = frame.shape
         
         x = int(bbox.xmin * w)
         y = int(bbox.ymin * h)
@@ -340,7 +368,6 @@ class DrowsinessDetector:
         height = min(h - y, height + 2 * padding)
         
         face_roi = frame[y:y+height, x:x+width]
-        
         if face_roi.size == 0:
             return None
         
@@ -647,12 +674,13 @@ class DrowsinessDetector:
         
         # Determine eye state
         eye_state = "Open"
+        mobilenet_predicted = False
         
         # Use MobileNetV2 model if available
         if self.use_mobilenet and self.eye_model is not None:
             try:
                 # Extract face ROI for MobileNetV2
-                face_roi = self.extract_face_roi(frame)
+                face_roi = self.extract_face_roi(frame, landmarks)
                 if face_roi is not None:
                     # Preprocess face ROI
                     face_processed = preprocess_input(face_roi.astype('float32'))
@@ -667,52 +695,32 @@ class DrowsinessDetector:
                     # Predict with MobileNetV2 model
                     eye_pred = self.eye_model.predict([face_processed, ear_features_scaled], verbose=0)
                     eye_state = "Closed" if np.argmax(eye_pred[0]) == 0 else "Open"
+                    mobilenet_predicted = True
             except Exception as e:
                 print(f"Error in MobileNetV2 prediction: {e}")
-                # Fallback to threshold-based detection
         
-        # Fallback to threshold-based detection with improved logic for small eyes, eyebags, and glasses
-        # Use adaptive threshold based on eye size
-        # For small eyes, use lower threshold; for normal eyes, use standard threshold
-        
-        # Extract eye dimensions from features for threshold-based detection
-        # ear_features = [avg_ear, left_ear, right_ear, left_eye_width, left_eye_height,
-        #                 right_eye_width, right_eye_height, eye_aspect_variance, eye_symmetry]
-        left_ear_val = ear_features[1] if len(ear_features) > 1 else avg_ear
-        right_ear_val = ear_features[2] if len(ear_features) > 2 else avg_ear
-        left_eye_width = ear_features[3] if len(ear_features) > 3 else 50
-        right_eye_width = ear_features[5] if len(ear_features) > 5 else 50
-        
-        # Calculate eye size normalization factor
-        avg_eye_width = (left_eye_width + right_eye_width) / 2.0 if (left_eye_width + right_eye_width) > 0 else 50
-        
-        # Adaptive threshold: lower for smaller eyes (e.g., Asian eyes typically 30-50px wide)
-        # Normal eyes are typically 40-70px wide
-        if avg_eye_width < 40:  # Small eyes
-            adaptive_threshold = EAR_THRESHOLD * 0.85  # Lower threshold for small eyes
-        else:
-            adaptive_threshold = EAR_THRESHOLD
-        
-        # Check if eye is definitely open (even for small eyes or with glasses)
-        # For glasses, if one eye is detected well, trust it
-        definitely_open = avg_ear >= MIN_EAR_FOR_OPEN or (max(left_ear_val, right_ear_val) >= MIN_EAR_FOR_OPEN if left_ear_val > 0 and right_ear_val > 0 else avg_ear >= MIN_EAR_FOR_OPEN)
-        
-        # Immediate eye state detection for display (but use counter for drowsiness logic)
-        if avg_ear < adaptive_threshold and not definitely_open:
+        # Fallback to threshold-based detection if MobileNetV2 not available
+        if not mobilenet_predicted:
+            left_ear_val = ear_features[1] if len(ear_features) > 1 else avg_ear
+            right_ear_val = ear_features[2] if len(ear_features) > 2 else avg_ear
+            left_eye_width = ear_features[3] if len(ear_features) > 3 else 50
+            right_eye_width = ear_features[5] if len(ear_features) > 5 else 50
+            
+            avg_eye_width = (left_eye_width + right_eye_width) / 2.0 if (left_eye_width + right_eye_width) > 0 else 50
+            adaptive_threshold = EAR_THRESHOLD * 0.85 if avg_eye_width < 40 else EAR_THRESHOLD
+            
+            if avg_ear < adaptive_threshold:
+                eye_state = "Closed"
+            else:
+                eye_state = "Open"
+
+        # Update closure counters for drowsiness tracking
+        if eye_state == "Closed":
             self.ear_counter += 1
-            # Change eye state immediately for display
-            if avg_ear < 0.15:  # Very low EAR - more confident it's closed
-                eye_state = "Closed"
-                if self.ear_counter >= EAR_CONSECUTIVE_FRAMES:
-                    self.closed_frames += 1
-            elif avg_ear < adaptive_threshold:  # Moderate EAR
-                eye_state = "Closed"
-                if self.ear_counter >= EAR_CONSECUTIVE_FRAMES * 2:  # Require double confirmation for counting
-                    self.closed_frames += 1
+            if self.ear_counter >= EAR_CONSECUTIVE_FRAMES:
+                self.closed_frames += 1
         else:
-            # Reset counter when eyes are open
             self.ear_counter = 0
-            eye_state = "Open"  # Immediately show as open
         
         # Track drowsiness duration - only alert after 3 seconds
         current_time = time.time()
@@ -796,24 +804,73 @@ class DrowsinessDetector:
         
         return (is_drowsy, eye_state, avg_ear, perclos, landmarks, risk_score, risk_category, self.alert_level)
     
-    def draw_landmarks(self, frame, landmarks):
-        """Draw facial landmarks - eyes only"""
+    def draw_landmarks(self, frame, landmarks, eye_state="Open", avg_ear=None):
+        """Draw prominent facial and eye landmarks with DMS HUD styling"""
+        if landmarks is None or frame is None:
+            return frame
+
         h, w, _ = frame.shape
-        
-        def draw_eye(indices, color):
+        num_landmarks = len(landmarks.landmark)
+
+        # Dynamic color based on eye state
+        is_closed = (eye_state == "Closed")
+        primary_color = (0, 70, 255) if is_closed else (0, 255, 80)        # Red if closed, Vibrant Green if open (BGR)
+        keypoint_color = (0, 230, 255) if not is_closed else (0, 165, 255) # Yellow/Cyan dots
+        bracket_color = (0, 140, 255) if is_closed else (0, 220, 255)      # HUD Corner brackets
+
+        def draw_contour(indices, color, thickness=2, is_closed_loop=True):
             try:
-                points = np.array([(int(landmarks.landmark[i].x * w), 
-                                  int(landmarks.landmark[i].y * h)) 
-                                 for i in indices], np.int32)
-                if len(points) > 0:
-                    cv2.polylines(frame, [points], True, color, 2)
-            except:
-                pass
-        
-        # Draw eyes in green
-        draw_eye(LEFT_EYE_INDICES, (0, 255, 0))
-        draw_eye(RIGHT_EYE_INDICES, (0, 255, 0))
-        
+                pts = np.array([
+                    (int(landmarks.landmark[i].x * w), int(landmarks.landmark[i].y * h))
+                    for i in indices if i < num_landmarks
+                ], np.int32)
+                if len(pts) > 1:
+                    cv2.polylines(frame, [pts], is_closed_loop, color, thickness, cv2.LINE_AA)
+                    for pt in pts:
+                        cv2.circle(frame, tuple(pt), 2, keypoint_color, -1, cv2.LINE_AA)
+                return pts
+            except Exception:
+                return None
+
+        # 1. Draw Full Detailed Eye Contours
+        pts_left = draw_contour(FULL_LEFT_EYE, primary_color, thickness=2, is_closed_loop=True)
+        pts_right = draw_contour(FULL_RIGHT_EYE, primary_color, thickness=2, is_closed_loop=True)
+
+        # 2. Draw Eyebrows (subtle tech overlay)
+        draw_contour(LEFT_EYEBROW, (160, 160, 160), thickness=1, is_closed_loop=False)
+        draw_contour(RIGHT_EYEBROW, (160, 160, 160), thickness=1, is_closed_loop=False)
+
+        # 3. Draw Iris / Pupil center points
+        if num_landmarks > 473:
+            for iris_idx in (LEFT_IRIS, RIGHT_IRIS):
+                ix = int(landmarks.landmark[iris_idx].x * w)
+                iy = int(landmarks.landmark[iris_idx].y * h)
+                cv2.circle(frame, (ix, iy), 3, (0, 255, 255), -1, cv2.LINE_AA)
+                cv2.circle(frame, (ix, iy), 6, (0, 255, 255), 1, cv2.LINE_AA)
+
+        # 4. Draw Corner HUD Brackets around each eye
+        for pts, label in ((pts_left, "L"), (pts_right, "R")):
+            if pts is not None and len(pts) > 0:
+                x_min, y_min = np.min(pts, axis=0)
+                x_max, y_max = np.max(pts, axis=0)
+                pad = 8
+                x1, y1 = max(0, x_min - pad), max(0, y_min - pad)
+                x2, y2 = min(w - 1, x_max + pad), min(h - 1, y_max + pad)
+                
+                blen = max(6, int((x2 - x1) * 0.25))
+                # Top-left
+                cv2.line(frame, (x1, y1), (x1 + blen, y1), bracket_color, 2, cv2.LINE_AA)
+                cv2.line(frame, (x1, y1), (x1, y1 + blen), bracket_color, 2, cv2.LINE_AA)
+                # Top-right
+                cv2.line(frame, (x2, y1), (x2 - blen, y1), bracket_color, 2, cv2.LINE_AA)
+                cv2.line(frame, (x2, y1), (x2, y1 + blen), bracket_color, 2, cv2.LINE_AA)
+                # Bottom-left
+                cv2.line(frame, (x1, y2), (x1 + blen, y2), bracket_color, 2, cv2.LINE_AA)
+                cv2.line(frame, (x1, y2), (x1, y2 - blen), bracket_color, 2, cv2.LINE_AA)
+                # Bottom-right
+                cv2.line(frame, (x2, y2), (x2 - blen, y2), bracket_color, 2, cv2.LINE_AA)
+                cv2.line(frame, (x2, y2), (x2, y2 - blen), bracket_color, 2, cv2.LINE_AA)
+
         return frame
     
     def close(self):
@@ -850,7 +907,7 @@ def main():
             is_drowsy, eye_state, ear, perclos, landmarks, risk_score, risk_category, alert_level = detector.detect(frame)
             
             if landmarks is not None:
-                frame = detector.draw_landmarks(frame, landmarks)
+                frame = detector.draw_landmarks(frame, landmarks, eye_state=eye_state, avg_ear=ear)
             
             status_color = (0, 0, 255) if is_drowsy else (0, 255, 0)
             status_text = "DROWSY!" if is_drowsy else "AWAKE"
